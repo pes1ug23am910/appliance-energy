@@ -2,6 +2,8 @@
 
 Executed locally on 1 October 2026. Test counts describe the checked-in implementation at this delivery; they are not coverage percentages or guarantees.
 
+The [GitHub clean-clone workflow](https://github.com/pes1ug23am910/appliance-energy/actions/runs/36880379809) also passed all four Linux jobs for source commit `7389c9e`: backend PostgreSQL tests, Python analytics/simulator/provisioning/dashboard tests, Flutter analyze/test/release build, and actual HTTP/TLS MQTT transport integration. Subsequent delivery documentation does not change the tested runtime source.
+
 | Area | Executed evidence | Limit |
 |---|---|---|
 | Java backend | 16 passing tests: 2 unit and 14 PostgreSQL integrations | Disposable database; broker transports tested separately |
