@@ -1,0 +1,66 @@
+{
+  "date": "2026-10-01",
+  "shared_host": true,
+  "experiments": [
+    {
+      "device_count": 100,
+      "duration_seconds": 60.5,
+      "process_cpu_seconds": 3.78125,
+      "interval_seconds": 2.0,
+      "scheduled_ticks": 15,
+      "missed_ticks": 0,
+      "generated_events": 1500,
+      "receipt_latency": {
+        "sample_count": 403,
+        "definition": "first publish attempt to durable application receipt; bounded latest samples per device",
+        "p50_seconds": 46.03100000000268,
+        "p95_seconds": 51.5,
+        "max_seconds": 52.18800000000192
+      },
+      "artifact": "fleet-100-final.json",
+      "accepted_delta": 403,
+      "dropped_delta": 0,
+      "pending_at_end": 1097
+    },
+    {
+      "device_count": 100,
+      "duration_seconds": 52.375,
+      "process_cpu_seconds": 4.0625,
+      "interval_seconds": 2.0,
+      "scheduled_ticks": 15,
+      "missed_ticks": 0,
+      "generated_events": 1500,
+      "receipt_latency": {
+        "sample_count": 1500,
+        "definition": "first publish attempt to durable application receipt; bounded latest samples per device",
+        "p50_seconds": 1.2030000000013388,
+        "p95_seconds": 16.43699999999808,
+        "max_seconds": 22.0
+      },
+      "artifact": "fleet-100-tuned.json",
+      "accepted_delta": 1500,
+      "dropped_delta": 0,
+      "pending_at_end": 0
+    },
+    {
+      "device_count": 1000,
+      "duration_seconds": 68.93800000000192,
+      "process_cpu_seconds": 14.734375,
+      "interval_seconds": 10.0,
+      "scheduled_ticks": 3,
+      "missed_ticks": 0,
+      "generated_events": 3000,
+      "receipt_latency": {
+        "sample_count": 3000,
+        "definition": "first publish attempt to durable application receipt; bounded latest samples per device",
+        "p50_seconds": 24.375,
+        "p95_seconds": 36.09399999999732,
+        "max_seconds": 37.67199999999866
+      },
+      "artifact": "fleet-1000.json",
+      "accepted_delta": 3000,
+      "dropped_delta": 0,
+      "pending_at_end": 0
+    }
+  ]
+}

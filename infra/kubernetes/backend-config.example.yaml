@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: appliance
+data:
+  SERVER_PORT: "8080"
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres.appliance.svc.cluster.local:5432/appliance"
+  SPRING_DATASOURCE_USERNAME: "appliance"
+  MQTT_ENABLED: "true"
+  MQTT_URI: "ssl://mosquitto.appliance.svc.cluster.local:8883"
+  MQTT_USERNAME: "backend"
+  MQTT_CLIENT_ID: "appliance-backend-kubernetes"
+  KAFKA_ENABLED: "true"
+  KAFKA_BOOTSTRAP_SERVERS: "kafka.appliance.svc.cluster.local:9092"
+  KAFKA_TOPIC: "appliance.telemetry.v1"
+  API_ALLOWED_ORIGINS: "http://localhost:18081,http://127.0.0.1:18081"

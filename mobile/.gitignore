@@ -1,0 +1,13 @@
+.dart_tool/
+build/
+.flutter-plugins-dependencies
+.pub-cache/
+*.db
+*.db-journal
+coverage/
+web/sqlite3.wasm
+web/sqflite_sw.js
+
+.venv-browser/
+
+__pycache__/

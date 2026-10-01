@@ -1,0 +1,26 @@
+menu "Appliance settings"
+config APPLIANCE_DEVICE_ID
+    string "Device ID"
+    default "device-0001"
+config APPLIANCE_WIFI_SSID
+    string "Wi-Fi SSID"
+    default ""
+config APPLIANCE_WIFI_PASSWORD
+    string "Wi-Fi password"
+    default ""
+config APPLIANCE_MQTT_URI
+    string "TLS broker URI"
+    default "mqtts://localhost:8883"
+config APPLIANCE_MQTT_PASSWORD
+    string "Device MQTT password"
+    default ""
+config APPLIANCE_OUTPUT_GPIO
+    int "Low voltage demonstration output GPIO"
+    default 2
+config APPLIANCE_OTA_URL
+    string "Optional HTTPS application firmware URL"
+    default ""
+config APPLIANCE_OTA_USE_BROKER_CA
+    bool "Use the local broker CA for attended HTTPS OTA"
+    default n
+endmenu

@@ -1,0 +1,88 @@
+name: appliance-energy
+services:
+  postgres:
+    image: postgres:18@sha256:5a5a84b19854a9ffaa54082c166ff4ec27473a361e496e5ea167f298f2da9722
+    environment:
+      POSTGRES_DB: appliance
+      POSTGRES_USER: appliance
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run bootstrap first}
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    ports:
+      - "127.0.0.1:15432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appliance -d appliance"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    mem_limit: 512m
+  mosquitto:
+    image: eclipse-mosquitto:2@sha256:38c0da4f2ef84284d47b3b3eeea1cb3bdeabe81ee10caf0cd5c5ff61ee3ea408
+    volumes:
+      - ./.runtime/mosquitto:/mosquitto/config:ro
+      - ./.runtime/certs:/mosquitto/certs:ro
+      - mqtt-data:/mosquitto/data
+    ports:
+      - "127.0.0.1:18883:8883"
+    mem_limit: 128m
+  kafka:
+    image: apache/kafka@sha256:77e3df9054047a88b520d0cc46e16696d3b22022e1d580aeccd2632df6532837
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:19092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://127.0.0.1:19092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_HEAP_OPTS: -Xmx384m -Xms256m
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    ports:
+      - "127.0.0.1:19092:19092"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 8s
+      retries: 30
+    mem_limit: 768m
+  backend:
+    build: ./backend
+    environment:
+      API_TOKEN: ${API_TOKEN:?run bootstrap first}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/appliance
+      SPRING_DATASOURCE_USERNAME: appliance
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      MQTT_ENABLED: "true"
+      MQTT_URI: ssl://mosquitto:8883
+      MQTT_USERNAME: backend
+      MQTT_PASSWORD: ${MQTT_BACKEND_PASSWORD}
+      MQTT_CA_CERT: /certs/ca.crt
+      MQTT_CLIENT_ID: appliance-backend
+      KAFKA_ENABLED: "true"
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_TOPIC: appliance.telemetry.v1
+      JAVA_TOOL_OPTIONS: -Xmx384m
+    volumes:
+      - ./.runtime/certs/ca.crt:/certs/ca.crt:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+    ports:
+      - "127.0.0.1:18080:8080"
+    mem_limit: 768m
+volumes:
+  postgres-data:
+  mqtt-data:
+  kafka-data:

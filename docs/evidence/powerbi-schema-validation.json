@@ -1,0 +1,22 @@
+{
+  "checked_files": [
+    "Energy.Report/definition/pages/forecast/page.json",
+    "Energy.Report/definition/pages/forecast/visuals/forecastTable/visual.json",
+    "Energy.Report/definition/pages/overview/page.json",
+    "Energy.Report/definition/pages/overview/visuals/devices/visual.json",
+    "Energy.Report/definition/pages/overview/visuals/energyByDay/visual.json",
+    "Energy.Report/definition/pages/overview/visuals/metric0/visual.json",
+    "Energy.Report/definition/pages/overview/visuals/metric1/visual.json",
+    "Energy.Report/definition/pages/overview/visuals/metric2/visual.json",
+    "Energy.Report/definition/pages/pages.json",
+    "Energy.Report/definition/pages/quality/page.json",
+    "Energy.Report/definition/pages/quality/visuals/qualityTable/visual.json",
+    "Energy.Report/definition/report.json",
+    "Energy.Report/definition/version.json",
+    "Energy.Report/definition.pbir",
+    "Energy.SemanticModel/definition.pbism"
+  ],
+  "schema_count": 9,
+  "errors": [],
+  "scope": "JSON schema validation only; does not execute M/DAX or render Power BI visuals"
+}

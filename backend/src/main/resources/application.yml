@@ -1,0 +1,46 @@
+server:
+  port: ${SERVER_PORT:8080}
+  error:
+    include-message: never
+spring:
+  application:
+    name: appliance-backend
+  task:
+    scheduling:
+      pool:
+        size: 3
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/appliance}
+    username: ${SPRING_DATASOURCE_USERNAME:appliance}
+    password: ${SPRING_DATASOURCE_PASSWORD:appliance}
+    hikari:
+      maximum-pool-size: 10
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+    deserialization:
+      fail-on-unknown-properties: true
+  flyway:
+    enabled: true
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+app:
+  api-token: ${API_TOKEN:}
+  device-stale-seconds: ${DEVICE_STALE_SECONDS:60}
+  ws-auth-timeout-seconds: ${WS_AUTH_TIMEOUT_SECONDS:5}
+  mqtt:
+    enabled: ${MQTT_ENABLED:true}
+    uri: ${MQTT_URI:ssl://localhost:8883}
+    username: ${MQTT_USERNAME:backend}
+    password: ${MQTT_PASSWORD:}
+    ca-cert: ${MQTT_CA_CERT:}
+    client-id: ${MQTT_CLIENT_ID:appliance-backend}
+  kafka:
+    enabled: ${KAFKA_ENABLED:true}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    topic: ${KAFKA_TOPIC:appliance.telemetry.v1}

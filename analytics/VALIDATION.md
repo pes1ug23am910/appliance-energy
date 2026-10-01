@@ -1,0 +1,20 @@
+# Local verification
+
+Verified on 1 October 2026 with Python 3.12.10 and the checked-in `uv.lock`.
+
+- `uv run --locked pytest -q`: **45 passed**. Coverage includes replay and late-arrival repair, conflicting identities, UUID normalization, counter resets/regressions/recovery, missing intervals, hour-boundary allocation, invalid raw evidence, partial anomaly labels, REFIT gap segmentation, forecast temporal splits and MLflow artifacts, SQL restrictions/top-N limits/UTC, provider transport/malformed JSON, structured database/interruption errors and wrong-answer scoring. Databricks checks are Python/embedded-SQL syntax and bundle references only.
+- `uv run --locked python scripts/run_demo.py`: **40,322 synthetic events**, two 70-day device histories, exact replay-stable total **221,277.67265636 Wh**, 14 forecast rows and **17/17** deterministic assistant evaluation checks. Generated evidence is in `artifacts/demo-evidence.json`; CSVs and hashes are in `artifacts/powerbi`.
+- A bounded live download from the cited REFIT record transferred **57,312 bytes**, producing **1,000 normalized public-dataset observations**, with no invalid rows or ingestion quarantines. The sample verifies adaptation and provenance, not forecast accuracy.
+- `pip-audit` checked the locked runtime requirements: **47 packages, zero known vulnerability findings, zero skipped packages**. This is an advisory-database result at verification time, not a guarantee of absence of vulnerabilities. The exact hashed requirement export and JSON audit are generated under `artifacts`.
+
+The synthetic forecast experiment did not show a successful challenger: calibration-selected ridge regression had worse untouched holdout MAE than seasonal-naive (390.37 versus 148.26 Wh for fixture-1; 444.30 versus 167.46 Wh for fixture-2). Both results are retained. Dashboard forecasts publish the seasonal-naive reference; separate candidate artifacts remain unpromoted. No model or hyperparameter was tuned after the holdout. Injected-anomaly evaluation reported precision 0.75 and recall 1.0 on explicitly labelled simulated days; these are not real-fault metrics.
+
+The concrete Ollama route was evaluated with the unchanged 18-case suite and prompt. Qwen 2.5 Coder 1.5B passed 9/18 overall, including only 3/12 answerable cases; all six unsafe/unsupported cases were blocked by the SQL guard and the model never abstained. Qwen 3.5 9B passed 17/18, including 11/12 answerable cases and six genuine abstentions; one Wh-versus-kWh result error remains. The challenger disabled its supported thinking mode to produce bounded JSON answers; the first model has no thinking capability. Both reports and failures are preserved. These strict output-contract scores are finite evaluation evidence, not general accuracy or speed claims.
+
+After the guard fixes and baseline export, saved-SQL replay verified all 36 original case outcomes unchanged without further inference. `artifacts/provider-guard-replay.json` records original report hashes and case results; the original actual-model reports remain intact.
+
+Actual local MQTT-to-Kafka exports were also checked: 91 batch manifests, 1,619 unique simulated observations, zero quarantines, and exactly 1.68874305 Wh before and after replay. SHA-256, row count, ordered event-ID hash and event-time bounds were verified before ingestion. The checked-in [result summary](results/local-verification.json) records these outcomes; raw generated evidence remains under `artifacts`.
+
+Databricks execution, Unity Catalog lineage, hosted Power BI refresh, physical sensors and Azure operation are not established by these local checks. Deterministic templates remain the default assistant mode.
+
+Reproduction commands and metric definitions are in [README.md](README.md). Generated artifacts, environments, databases, downloaded data and private account information are excluded from source publication.

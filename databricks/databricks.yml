@@ -1,0 +1,51 @@
+bundle:
+  name: appliance-energy
+
+variables:
+  catalog:
+    description: Existing Unity Catalog catalog available to this workspace
+    default: workspace
+  schema:
+    default: appliance_energy
+  landing_path:
+    description: Existing UC volume directory containing immutable normalized JSONL batches
+  max_gap_seconds:
+    default: "120"
+
+resources:
+  jobs:
+    appliance_lakehouse:
+      name: appliance-energy-lakehouse
+      max_concurrent_runs: 1
+      timeout_seconds: 1800
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema
+          default: ${var.schema}
+        - name: landing_path
+          default: ${var.landing_path}
+        - name: max_gap_seconds
+          default: ${var.max_gap_seconds}
+      tasks:
+        - task_key: ingest
+          notebook_task:
+            notebook_path: ./notebooks/01_ingest.py
+          max_retries: 1
+        - task_key: model
+          depends_on:
+            - task_key: ingest
+          notebook_task:
+            notebook_path: ./notebooks/02_model.py
+          max_retries: 1
+        - task_key: forecast
+          depends_on:
+            - task_key: model
+          notebook_task:
+            notebook_path: ./notebooks/03_forecast.py
+          max_retries: 0
+
+targets:
+  dev:
+    default: true
+    mode: development

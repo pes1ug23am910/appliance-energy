@@ -1,0 +1,14 @@
+{
+  "status": "passed",
+  "checks": [
+    "unauthenticated API rejected",
+    "ten API retries preserve one command and revision",
+    "changed payload and stale revision rejected",
+    "real TLS MQTT report confirms desired state",
+    "telemetry duplicate has one durable logical row and receipt",
+    "lost application report remains unconfirmed until reconciled",
+    "expired command rejected"
+  ],
+  "duration_seconds": 2.875,
+  "environment": "local Docker PostgreSQL, Java, Mosquitto TLS and Python simulator"
+}

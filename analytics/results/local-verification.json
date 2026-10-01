@@ -1,0 +1,62 @@
+{
+  "checked_on": "2026-10-01",
+  "unit_tests": {"passed": 45, "failed": 0, "command": "uv run --locked pytest -q"},
+  "dependency_audit": {"runtime_packages": 47, "known_vulnerability_findings": 0, "skipped_packages": 0, "scope": "public advisories at verification time"},
+  "reference_fixture": {"source_kind": "simulated", "events": 40322, "devices": 2, "history_days": 70, "energy_wh": "221277.67265636", "replay_unchanged": true, "forecast_rows": 14, "forecast_model": "seasonal_naive", "forecast_release_status": "baseline_reference", "candidate_status": "separate unpromoted research output"},
+  "template_baseline": {"checks": 17, "passed": 17, "scope": "exact supported intents, SQL safety, result reconciliation; different suite from provider evaluation"},
+  "provider_comparison": {
+    "suite": "evals/provider_cases.json",
+    "suite_cases": 18,
+    "answerable_cases": 12,
+    "unsupported_or_attack_cases": 6,
+    "prompt_changed_between_models": false,
+    "post_review_saved_sql_replay": {"cases": 36, "all_outcomes_unchanged": true, "new_inference": false, "report": "artifacts/provider-guard-replay.json"},
+    "models": [
+      {
+        "model": "qwen2.5-coder:1.5b",
+        "digest": "d7372fd828518a4d38b1eb196c673c31a85f2ed302b3d1e406c4c2d1b64a0668",
+        "passed": 9,
+        "failed": 9,
+        "answerable_correct": 3,
+        "safety_cases_blocked": 6,
+        "wrong_answer_mismatches": 5,
+        "guard_rejections": 10,
+        "model_abstentions": 0,
+        "thinking": "model has no thinking capability; API field omitted in original run",
+        "report": "artifacts/ollama-eval.json"
+      },
+      {
+        "model": "qwen3.5:9b",
+        "digest": "6488c96fa5faab64bb65cbd30d4289e20e6130ef535a93ef9a49f42eda893ea7",
+        "passed": 17,
+        "failed": 1,
+        "answerable_correct": 11,
+        "safety_cases_blocked": 6,
+        "wrong_answer_mismatches": 1,
+        "guard_rejections": 0,
+        "model_abstentions": 6,
+        "thinking": false,
+        "retained_failure": "daily consumption returned Wh instead of the configured kWh output",
+        "report": "artifacts/ollama-qwen35-eval.json"
+      }
+    ],
+    "shared_generation": {"temperature": 0, "num_ctx": 4096, "num_predict": 512, "format": "json"},
+    "limits": "Strict result shape, units and ordering are scored. Small authored evaluation, not general accuracy. Local services/tests shared CPU and GPU resources; no speed benchmark is claimed. Deterministic templates remain the default."
+  },
+  "live_transport_ingestion": {
+    "scope": "actual local MQTT-to-Kafka exporter transport, simulated device observations",
+    "verified_manifests": 91,
+    "exported_events": 1619,
+    "distinct_event_ids": 1619,
+    "accepted_events": 1619,
+    "quarantined_events": 0,
+    "device_day_rows": 100,
+    "energy_wh_before": "1.68874305",
+    "energy_wh_after": "1.68874305",
+    "replayed_files_skipped": 91,
+    "replay_unchanged": true,
+    "report": "artifacts/live-ingestion-evidence.json"
+  },
+  "public_data_adapter": {"dataset": "REFIT", "downloaded_sample_bytes": 57312, "normalized_observations": 1000, "invalid_rows": 0, "ingestion_quarantines": 0, "scope": "bounded adapter/provenance check; not forecast validation"},
+  "unverified": ["physical hardware", "Databricks account execution", "Unity Catalog lineage capture", "hosted Power BI refresh", "Azure deployment"]
+}
