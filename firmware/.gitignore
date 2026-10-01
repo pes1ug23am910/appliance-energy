@@ -2,3 +2,7 @@ build*/
 sdkconfig.signed
 sdkconfig.signed.old
 .local/
+sdkconfig.ble
+sdkconfig.ble.old
+sdkconfig.signed-ble
+sdkconfig.signed-ble.old

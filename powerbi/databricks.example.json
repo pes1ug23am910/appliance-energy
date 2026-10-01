@@ -1,0 +1,7 @@
+{
+  "host": "example.cloud.databricks.com",
+  "http_path": "/sql/1.0/warehouses/your-warehouse-id",
+  "catalog": "workspace",
+  "schema": "appliance_energy",
+  "cloud": "aws"
+}

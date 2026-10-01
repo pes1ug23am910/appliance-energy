@@ -21,8 +21,9 @@ Future<void> main() async {
             child: Padding(
               padding: const EdgeInsets.all(32),
               child: Text(
-                'Local storage could not open. Check that browser storage is enabled and '
-                'the SQLite web assets are served. Reload after fixing storage.',
+                'Local storage could not open. Check available device storage. '
+                'In a browser, allow site storage and serve the SQLite web assets. '
+                'Restart after fixing storage.',
               ),
             ),
           ),

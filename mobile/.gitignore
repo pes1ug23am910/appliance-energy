@@ -11,3 +11,6 @@ web/sqflite_sw.js
 .venv-browser/
 
 __pycache__/
+.idea/
+*.iml
+.metadata

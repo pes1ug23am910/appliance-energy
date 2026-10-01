@@ -1,6 +1,6 @@
 # Appliance Energy operator app
 
-Flutter web console for the API in ../contracts/PROTOCOL.md. It shows device state, report freshness, energy samples and a persistent command history. Commands set absolute power and fan speed; a local queue entry never represents device confirmation.
+Flutter web and Android console for the API in ../contracts/PROTOCOL.md. It shows device state, report freshness, energy samples and a persistent command history. Commands set absolute power and fan speed; a local queue entry never represents device confirmation.
 
 ## Run
 
@@ -31,7 +31,28 @@ Use a fixed browser origin and port: browser storage belongs to that origin. Cle
 - A report older than 30 seconds, missing, or more than five seconds in the future is labelled stale/unknown.
 - Telemetry preserves source kind and individual sample timestamps. The boot counter is not presented as total energy across device restarts.
 
-The storage adapters use SQLite FFI for native targets and SQLite WASM with IndexedDB persistence for the browser. Web is the built and exercised application target. Native storage is exercised by tests; Android/iOS/Windows app packaging and device builds are separate work. The web adapter is an experimental upstream package, so browser persistence requires an application-level reload check as well as the native SQLite tests.
+The storage adapters use the native sqflite platform plugin on Android/iOS, SQLite FFI on desktop, and SQLite WASM with IndexedDB persistence in the browser. Android host packaging is included. iOS/Windows packaging remains separate work. The web adapter is an experimental upstream package, so browser persistence requires an application-level reload check as well as the SQLite tests.
+
+## Android
+
+Install the Android SDK command-line tools, platform/build tools, and a compatible JDK. Point Flutter at them with `flutter config --android-sdk <path> --jdk-dir <path>`. Then run:
+
+```sh
+flutter pub get
+flutter build apk --debug --target-platform android-arm64,android-x64
+adb install -r build/app/outputs/flutter-apk/app-debug.apk
+adb reverse tcp:18080 tcp:18080
+```
+
+`adb reverse` lets the emulator or USB-connected phone use the same `http://127.0.0.1:18080` backend origin as the local demo. Android's network policy permits cleartext only for localhost/127.0.0.1; remote servers require HTTPS. Android backup is disabled so a device backup does not copy queued commands to another installation. Tokens remain in memory. This is a locally signed sideload package; Play Store publication needs the owner's stable signing key and release setup.
+
+Run the real native SQLite plugin persistence check on a connected emulator/device:
+
+```sh
+flutter test integration_test/native_store_test.dart -d <device-id>
+```
+
+The integration test closes/reopens the platform database, preserves an uncertain command's original payload, verifies revisions above 32-bit range, isolates server origins and persists a later confirmed receipt. It does not establish physical phone or appliance behavior.
 
 ## Verify and build
 

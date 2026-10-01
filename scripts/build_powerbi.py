@@ -9,6 +9,7 @@ import argparse
 import csv
 import json
 from pathlib import Path
+from powerbi_source import connection_parameters, native_source, m_parameter, m_text
 
 SCHEMA = "https://developer.microsoft.com/json-schemas/fabric/item/"
 
@@ -38,7 +39,7 @@ def visual(folder, name, kind, roles, position, title):
                    }}]}}})
 
 
-def table_definition(name, filename, headers, numeric, dates):
+def table_definition(name, filename, headers, numeric, dates, connection=None):
     columns = []
     changes = []
     for header in headers:
@@ -46,21 +47,25 @@ def table_definition(name, filename, headers, numeric, dates):
         columns.append({"name": header, "dataType": dtype, "sourceColumn": header,
                         "summarizeBy": "sum" if header in numeric else "none"})
         mtype = "type datetime" if header in dates else "type number" if header in numeric else "type text"
-        changes.append('{"' + header + '", ' + mtype + '}')
+        changes.append('{' + m_text(header) + ', ' + mtype + '}')
     source = ["let", f'    Source = Csv.Document(File.Contents(DataFolder & "/{filename}"), [Delimiter=",", Encoding=65001, QuoteStyle=QuoteStyle.Csv]),',
               '    Headers = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),',
               '    Typed = Table.TransformColumnTypes(Headers, {' + ', '.join(changes) + '}, "en-US"),',
               '    Cohort = Table.SelectRows(Typed, each [source_kind] = SourceKind)', "in", "    Cohort"]
+    if connection:
+        source = native_source(Path(filename).stem, headers, changes, connection)
     return {"name": name, "columns": columns,
             "partitions": [{"name": name, "mode": "import", "source": {"type": "m", "expression": source}}]}
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data", type=Path, required=True)
+    parser.add_argument("--data", type=Path, required=True, help="Gold CSV exports provide the validated report schema")
+    parser.add_argument("--databricks-config", type=Path, help="Optional JSON connection settings; no credentials")
     parser.add_argument("--output", type=Path, default=Path("artifacts/powerbi"))
     parser.add_argument("--source-kind", choices=["simulated", "measured", "estimated", "public_dataset"], default="simulated")
     args = parser.parse_args()
+    connection = connection_parameters(args.databricks_config) if args.databricks_config else None
     data = args.data.resolve()
     output = args.output.resolve()
     required = {"Energy": "gold_device_daily.csv", "Forecast": "forecast_daily.csv"}
@@ -68,9 +73,14 @@ def main():
     for name, filename in required.items():
         with (data / filename).open(encoding="utf-8-sig") as file:
             headers[name] = next(csv.reader(file))
+        required_columns = ({"device_id", "source_kind", "day", "energy_wh", "unallocated_energy_wh", "coverage_ratio", "gap_count", "reset_count", "invalid_interval_count"}
+                            if name == "Energy" else {"device_id", "source_kind", "target_date", "model", "prediction_wh", "lower_wh", "upper_wh", "interval_nominal", "interval_status"})
+        missing = required_columns - set(headers[name])
+        if missing:
+            parser.error(f"{filename} is missing report columns: {', '.join(sorted(missing))}")
     numeric = {"energy_wh", "unallocated_energy_wh", "coverage_seconds", "coverage_ratio", "reading_count", "mean_power_w", "peak_power_w", "gap_count", "reset_count", "invalid_interval_count", "prediction_wh", "lower_wh", "upper_wh", "interval_nominal", "horizon_days"}
     dates = {"day", "forecast_origin", "target_date"}
-    tables = [table_definition(name, filename, headers[name], numeric, dates) for name, filename in required.items()]
+    tables = [table_definition(name, filename, headers[name], numeric, dates, connection) for name, filename in required.items()]
     tables[0]["measures"] = [
         {"name": "Observed energy kWh", "expression": "DIVIDE(SUM(Energy[energy_wh]), 1000)", "formatString": "0.000"},
         {"name": "Unallocated energy kWh", "expression": "DIVIDE(SUM(Energy[unallocated_energy_wh]), 1000)", "formatString": "0.000"},
@@ -81,9 +91,9 @@ def main():
     write(model / "definition.pbism", {"$schema": SCHEMA + "semanticModel/definitionProperties/1.0.0/schema.json", "version": "1.0", "settings": {}})
     write(model / "model.bim", {"name": "ApplianceEnergy", "compatibilityLevel": 1567,
         "model": {"culture": "en-US", "defaultPowerBIDataSourceVersion": "powerBI_V3",
-                  "expressions": [
-                      {"name": "DataFolder", "kind": "m", "expression": json.dumps(data.as_posix()) + ' meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]'},
-                      {"name": "SourceKind", "kind": "m", "expression": json.dumps(args.source_kind) + ' meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]'}],
+                  "expressions": ([m_parameter("SourceKind", args.source_kind)] +
+                      [m_parameter(name, value) for name, value in connection.items() if name != "connector"]
+                      if connection else [m_parameter("DataFolder", data.as_posix()), m_parameter("SourceKind", args.source_kind)]),
                   "tables": tables}})
     report = output / "Energy.Report"
     write(report / "definition.pbir", {"$schema": SCHEMA + "report/definitionProperties/2.0.0/schema.json", "version": "4.0", "datasetReference": {"byPath": {"path": "../Energy.SemanticModel"}}})
@@ -104,7 +114,7 @@ def main():
     forecast = definition / "pages/forecast"
     visual(forecast, "forecastTable", "tableEx", {"Values": [projection("Forecast", column) for column in ["device_id", "source_kind", "target_date", "model", "prediction_wh", "lower_wh", "upper_wh", "interval_nominal", "interval_status"] if column in headers["Forecast"]]}, (24, 24, 1230, 650, 0), "Forecast values and interval status in Wh")
     write(output / "Energy.pbip", {"version": "1.0", "artifacts": [{"report": {"path": "Energy.Report"}}], "settings": {"enableAutoRecovery": True}})
-    print(json.dumps({"project": str(output / "Energy.pbip"), "pages": len(pages), "tables": len(tables)}))
+    print(json.dumps({"project": str(output / "Energy.pbip"), "pages": len(pages), "tables": len(tables), "source": "databricks" if connection else "csv"}))
 
 
 if __name__ == "__main__":

@@ -27,6 +27,11 @@
 #include "nvs.h"
 #include "mqtt_client.h"
 #include "cJSON.h"
+#include "telemetry_spool.h"
+#if CONFIG_APPLIANCE_BLE_PROVISIONING
+#include "wifi_provisioning/manager.h"
+#include "wifi_provisioning/scheme_ble.h"
+#endif
 
 static const char *TAG = "appliance";
 extern const uint8_t ca_cert_pem_start[] asm("_binary_ca_cert_pem_start");
@@ -49,6 +54,68 @@ static uint32_t sequence;
 static uint32_t report_sequence;
 static double energy_wh;
 static _Atomic bool broker_connected;
+static nvs_handle_t spool_nvs;
+static telemetry_spool_t spool;
+static SemaphoreHandle_t spool_lock;
+static bool spool_overflow;
+static int desired_subscription;
+
+static int spool_storage_read(void *context,unsigned slot,uint8_t *record,size_t *size) {
+    char key[8]; snprintf(key,sizeof(key),"t%03u",slot);
+    esp_err_t result=nvs_get_blob(spool_nvs,key,record,size);
+    return result==ESP_OK ? 0 : result==ESP_ERR_NVS_NOT_FOUND ? 1 : -1;
+}
+static int spool_storage_write(void *context,unsigned slot,const uint8_t *record,size_t size) {
+    char key[8]; snprintf(key,sizeof(key),"t%03u",slot);
+    esp_err_t result=nvs_set_blob(spool_nvs,key,record,size);
+    if (result==ESP_OK) result=nvs_commit(spool_nvs);
+    return result==ESP_OK ? 0 : -1;
+}
+static int spool_storage_erase(void *context,unsigned slot) {
+    char key[8]; snprintf(key,sizeof(key),"t%03u",slot);
+    esp_err_t result=nvs_erase_key(spool_nvs,key);
+    if (result==ESP_OK) result=nvs_commit(spool_nvs);
+    return result==ESP_OK ? 0 : -1;
+}
+
+static void receipt(const char *payload,int length) {
+    cJSON *body=cJSON_ParseWithLength(payload,length);
+    if (!body) return;
+    const cJSON *id=cJSON_GetObjectItemCaseSensitive(body,"event_id");
+    const cJSON *status=cJSON_GetObjectItemCaseSensitive(body,"status");
+    if (cJSON_IsString(id) && cJSON_IsString(status) && !strcmp(status->valuestring,"accepted")) {
+        xSemaphoreTake(spool_lock,portMAX_DELAY);
+        spool_result_t result=spool_accept(&spool,id->valuestring);
+        xSemaphoreGive(spool_lock);
+        if (result==SPOOL_IO) esp_restart();
+    }
+    cJSON_Delete(body);
+}
+
+static void spool_task(void *arg) {
+    char topic[128]; snprintf(topic,sizeof(topic),"devices/%s/telemetry",CONFIG_APPLIANCE_DEVICE_ID);
+    unsigned cursor=0;
+    while (true) {
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        if (!broker_connected) continue;
+        /* Bounded replay, including old boot IDs. Broker ACKs never retire records. */
+        unsigned scanned=0;
+        for (unsigned sent=0; sent<8 && scanned<SPOOL_CAPACITY; sent++) {
+            char payload[SPOOL_PAYLOAD_MAX];
+            xSemaphoreTake(spool_lock,portMAX_DELAY);
+            spool_result_t result=SPOOL_ABSENT;
+            while (scanned<SPOOL_CAPACITY && result==SPOOL_ABSENT) {
+                result=spool_read(&spool,cursor,payload,sizeof(payload));
+                cursor=(cursor+1)%SPOOL_CAPACITY;
+                scanned++;
+            }
+            xSemaphoreGive(spool_lock);
+            if (result==SPOOL_IO) esp_restart();
+            if (result!=SPOOL_OK) break;
+            if (esp_mqtt_client_publish(mqtt,topic,payload,0,1,0)<0) break;
+        }
+    }
+}
 
 static void boot_check_failed(const char *reason) {
     ESP_LOGE(TAG,"Boot diagnostics failed: %s",reason);
@@ -161,19 +228,59 @@ static void mqtt_event(void *arg,esp_event_base_t base,int32_t event_id,void *da
     if (event_id==MQTT_EVENT_CONNECTED) {
         broker_connected=true;
         char topic[128]; snprintf(topic,sizeof(topic),"devices/%s/desired",CONFIG_APPLIANCE_DEVICE_ID);
+        desired_subscription=esp_mqtt_client_subscribe(mqtt,topic,1);
+        snprintf(topic,sizeof(topic),"devices/%s/receipt",CONFIG_APPLIANCE_DEVICE_ID);
         esp_mqtt_client_subscribe(mqtt,topic,1);
-    } else if (event_id==MQTT_EVENT_SUBSCRIBED) {
+    } else if (event_id==MQTT_EVENT_SUBSCRIBED && event->msg_id==desired_subscription) {
         cJSON *sync=cJSON_CreateObject();
         cJSON_AddStringToObject(sync,"device_id",CONFIG_APPLIANCE_DEVICE_ID);
         cJSON_AddStringToObject(sync,"boot_id",boot_id);
         publish("sync",sync); report();
     } else if (event_id==MQTT_EVENT_DISCONNECTED) broker_connected=false;
     else if (event_id==MQTT_EVENT_DATA) {
-        /* Reject fragmented/oversized commands; reconnect sync can retry. */
+        /* Reject fragmented/oversized messages; replay and reconnect sync retry. */
         char topic[128]; snprintf(topic,sizeof(topic),"devices/%s/desired",CONFIG_APPLIANCE_DEVICE_ID);
-        if (!event->retain && event->current_data_offset==0 && event->data_len==event->total_data_len && event->data_len<2048 &&
-            event->topic_len==(int)strlen(topic) && !memcmp(event->topic,topic,event->topic_len)) command(event->data,event->data_len);
+        if (!event->retain && event->current_data_offset==0 && event->data_len==event->total_data_len && event->data_len<2048) {
+            if (event->topic_len==(int)strlen(topic) && !memcmp(event->topic,topic,event->topic_len)) command(event->data,event->data_len);
+            snprintf(topic,sizeof(topic),"devices/%s/receipt",CONFIG_APPLIANCE_DEVICE_ID);
+            if (event->topic_len==(int)strlen(topic) && !memcmp(event->topic,topic,event->topic_len)) receipt(event->data,event->data_len);
+        }
     }
+}
+
+#if CONFIG_APPLIANCE_BLE_PROVISIONING
+static void provision_event(void *arg,esp_event_base_t base,int32_t event_id,void *data) {
+    if (event_id==WIFI_PROV_END) wifi_prov_mgr_deinit();
+    else if (event_id==WIFI_PROV_CRED_FAIL) ESP_LOGW(TAG,"Wi-Fi provisioning failed; verify the network credentials");
+}
+#endif
+
+static unsigned start_wifi(void) {
+#if CONFIG_APPLIANCE_BLE_PROVISIONING
+    wifi_prov_mgr_config_t provisioning={.scheme=wifi_prov_scheme_ble,
+        .scheme_event_handler=WIFI_PROV_SCHEME_BLE_EVENT_HANDLER_FREE_BTDM};
+    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_PROV_EVENT,ESP_EVENT_ANY_ID,provision_event,NULL));
+    ESP_ERROR_CHECK(wifi_prov_mgr_init(provisioning));
+    bool provisioned=false;
+    ESP_ERROR_CHECK(wifi_prov_mgr_is_provisioned(&provisioned));
+    if (!provisioned) {
+        if (strlen(CONFIG_APPLIANCE_PROVISION_POP)<16) boot_check_failed("Configure a unique provisioning proof of possession (16+ characters)");
+        char name[16]; uint8_t mac[6]; ESP_ERROR_CHECK(esp_wifi_get_mac(WIFI_IF_STA,mac));
+        snprintf(name,sizeof(name),"APPL_%02X%02X%02X",mac[3],mac[4],mac[5]);
+        ESP_LOGI(TAG,"Provisioning service: %s",name);
+        ESP_ERROR_CHECK(wifi_prov_mgr_start_provisioning(WIFI_PROV_SECURITY_1,CONFIG_APPLIANCE_PROVISION_POP,name,NULL));
+        return 300;
+    }
+    wifi_prov_mgr_deinit();
+#else
+    wifi_config_t config={0};
+    strlcpy((char*)config.sta.ssid,CONFIG_APPLIANCE_WIFI_SSID,sizeof(config.sta.ssid));
+    strlcpy((char*)config.sta.password,CONFIG_APPLIANCE_WIFI_PASSWORD,sizeof(config.sta.password));
+    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA,&config));
+#endif
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+    ESP_ERROR_CHECK(esp_wifi_start());
+    return 60;
 }
 
 static void wifi_event(void *arg,esp_event_base_t base,int32_t event_id,void *data) {
@@ -224,6 +331,10 @@ void app_main(void) {
     setenv("TZ","UTC0",1); tzset();
     /* Never erase NVS automatically on a recovery error: that would lose revision fencing. */
     ESP_ERROR_CHECK(nvs_flash_init());
+    ESP_ERROR_CHECK(nvs_flash_init_partition("telemetry"));
+    ESP_ERROR_CHECK(nvs_open_from_partition("telemetry","spool",NVS_READWRITE,&spool_nvs));
+    spool_lock=xSemaphoreCreateMutex();
+    if (!spool_lock || spool_open(&spool,(spool_storage_t){.read=spool_storage_read,.write=spool_storage_write,.erase=spool_storage_erase})!=SPOOL_OK) abort();
     ESP_ERROR_CHECK(nvs_open("appliance",NVS_READWRITE,&settings));
     size_t size=sizeof(desired); esp_err_t error=nvs_get_blob(settings,"desired",&desired,&size);
     if (error!=ESP_OK && error!=ESP_ERR_NVS_NOT_FOUND) ESP_ERROR_CHECK(error);
@@ -238,12 +349,9 @@ void app_main(void) {
     ESP_ERROR_CHECK(esp_wifi_init(&init));
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT,ESP_EVENT_ANY_ID,wifi_event,NULL));
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT,IP_EVENT_STA_GOT_IP,wifi_event,NULL));
-    wifi_config_t config={0};
-    strlcpy((char*)config.sta.ssid,CONFIG_APPLIANCE_WIFI_SSID,sizeof(config.sta.ssid));
-    strlcpy((char*)config.sta.password,CONFIG_APPLIANCE_WIFI_PASSWORD,sizeof(config.sta.password));
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA)); ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA,&config));
-    ESP_ERROR_CHECK(esp_wifi_start());
-    if (!(xEventGroupWaitBits(network,1,pdFALSE,pdTRUE,pdMS_TO_TICKS(60000)) & 1)) boot_check_failed("Wi-Fi timeout");
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+    unsigned wifi_timeout=start_wifi();
+    if (!(xEventGroupWaitBits(network,1,pdFALSE,pdTRUE,pdMS_TO_TICKS(wifi_timeout*1000)) & 1)) boot_check_failed("Wi-Fi timeout");
     esp_sntp_setoperatingmode(SNTP_OPMODE_POLL); esp_sntp_setservername(0,"pool.ntp.org"); esp_sntp_init();
     for (int attempts=0; attempts<60 && time(NULL)<1700000000; attempts++) vTaskDelay(pdMS_TO_TICKS(1000));
     if (time(NULL)<1700000000) boot_check_failed("Clock synchronization timeout");
@@ -267,6 +375,7 @@ void app_main(void) {
     if (esp_ota_get_state_partition(esp_ota_get_running_partition(),&ota_state)==ESP_OK && ota_state==ESP_OTA_IMG_PENDING_VERIFY)
         ESP_ERROR_CHECK(esp_ota_mark_app_valid_cancel_rollback());
     xTaskCreate(ota_task,"ota",8192,NULL,3,NULL);
+    if (xTaskCreate(spool_task,"spool",6144,NULL,3,NULL)!=pdPASS) abort();
     int64_t previous=esp_timer_get_time();
     while (true) {
         vTaskDelay(pdMS_TO_TICKS(10000));
@@ -275,7 +384,6 @@ void app_main(void) {
         double power=2.0+(output_power ? 40.0*desired.speed/100.0 : 0.0);
         energy_wh+=power*seconds/3600.0; sequence++;
         xSemaphoreGive(state_lock);
-        if (!broker_connected) continue;
         char now[32],event_id[37]; timestamp(now); uuid(event_id);
         cJSON *event=cJSON_CreateObject();
         cJSON_AddNumberToObject(event,"schema_version",1); cJSON_AddStringToObject(event,"event_id",event_id);
@@ -285,7 +393,17 @@ void app_main(void) {
         cJSON_AddNumberToObject(event,"energy_wh_total",energy_wh); cJSON_AddStringToObject(event,"firmware_version",esp_app_get_description()->version);
         cJSON *flags=cJSON_AddArrayToObject(event,"quality_flags");
         cJSON_AddItemToArray(flags,cJSON_CreateString("setpoint_model_no_energy_sensor"));
-        cJSON_AddItemToArray(flags,cJSON_CreateString("no_durable_telemetry_spool"));
-        publish("telemetry",event); report();
+        if (spool_overflow) cJSON_AddItemToArray(flags,cJSON_CreateString("telemetry_spool_capacity_exceeded"));
+        char *payload=cJSON_PrintUnformatted(event);
+        cJSON_Delete(event);
+        if (!payload) abort();
+        xSemaphoreTake(spool_lock,portMAX_DELAY);
+        spool_result_t stored=spool_append(&spool,event_id,payload);
+        xSemaphoreGive(spool_lock);
+        free(payload);
+        if (stored==SPOOL_IO || stored==SPOOL_INVALID) esp_restart();
+        spool_overflow=stored==SPOOL_FULL;
+        if (spool_overflow) ESP_LOGW(TAG,"Telemetry spool full: preserving unacknowledged data, skipping new sample");
+        if (broker_connected) report();
     }
 }

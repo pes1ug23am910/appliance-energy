@@ -8,6 +8,17 @@ config APPLIANCE_WIFI_SSID
 config APPLIANCE_WIFI_PASSWORD
     string "Wi-Fi password"
     default ""
+config APPLIANCE_BLE_PROVISIONING
+    bool "Provision Wi-Fi using the ESP BLE Provisioning app"
+    default n
+    depends on BT_ENABLED
+config APPLIANCE_PROVISION_POP
+    string "Unique device proof of possession (at least 16 characters)"
+    default ""
+    depends on APPLIANCE_BLE_PROVISIONING
+    help
+        Supplied out of band to the owner. Never log this secret or reuse it
+        across devices. An empty value refuses first-time provisioning.
 config APPLIANCE_MQTT_URI
     string "TLS broker URI"
     default "mqtts://localhost:8883"

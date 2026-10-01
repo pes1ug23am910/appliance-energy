@@ -7,6 +7,7 @@ This proves host cryptographic checks, not device boot, OTA or power-cut behavio
 from __future__ import annotations
 
 import hashlib
+import argparse
 import json
 import os
 from pathlib import Path
@@ -27,6 +28,9 @@ def secure(*args: str, expect_ok: bool = True) -> subprocess.CompletedProcess[st
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--ble", action="store_true", help="Also compile the optional BLE provisioning profile")
+    args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     os.chdir(root)
     if not os.environ.get("IDF_PATH"):
@@ -40,13 +44,16 @@ def main() -> None:
     if signing_key.exists():
         raise SystemExit("Refusing to replace an existing signing key; use a fresh compiler container.")
     secure("generate_signing_key", "--version", "1", str(signing_key))
+    build_name = "build-signed-ble" if args.ble else "build-signed"
+    config_name = "sdkconfig.signed-ble" if args.ble else "sdkconfig.signed"
+    defaults = "sdkconfig.defaults;" + ("sdkconfig.ble.defaults;" if args.ble else "") + "sdkconfig.signed.defaults"
     build = subprocess.run([
-        "idf.py", "-B", "build-signed", "-D", f"SDKCONFIG={root / 'sdkconfig.signed'}",
-        "-D", "SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.signed.defaults", "build"
+        "idf.py", "-B", build_name, "-D", f"SDKCONFIG={root / config_name}",
+        "-D", f"SDKCONFIG_DEFAULTS={defaults}", "build"
     ])
     if build.returncode:
         raise SystemExit(build.returncode)
-    config = (root / "sdkconfig.signed").read_text()
+    config = (root / config_name).read_text()
     required = [
         "CONFIG_SECURE_SIGNED_APPS_NO_SECURE_BOOT=y",
         "CONFIG_SECURE_SIGNED_ON_UPDATE_NO_SECURE_BOOT=y",
@@ -54,7 +61,9 @@ def main() -> None:
     ]
     if any(flag not in config for flag in required) or "\nCONFIG_SECURE_BOOT=y\n" in config:
         raise RuntimeError("Signed-update configuration does not match the software-only profile")
-    artifact = root / "build-signed" / "appliance_device.bin"
+    if args.ble and "CONFIG_APPLIANCE_BLE_PROVISIONING=y" not in config:
+        raise RuntimeError("BLE provisioning profile was not enabled")
+    artifact = root / build_name / "appliance_device.bin"
     public_key = key_dir / "ota-public-key.pem"
     secure("extract_public_key", "--version", "1", "--keyfile", str(signing_key), str(public_key))
     secure("verify_signature", "--version", "1", "--keyfile", str(public_key), str(artifact))
@@ -84,8 +93,9 @@ def main() -> None:
         "wrong_key": "rejected",
         "unsigned_image": "rejected",
         "hardware_secure_boot_enabled": False,
+        "ble_provisioning_compiled": args.ble,
     }
-    (root / "build-signed" / "signature-verification.json").write_text(json.dumps(evidence, indent=2) + "\n")
+    (root / build_name / "signature-verification.json").write_text(json.dumps(evidence, indent=2) + "\n")
     print(json.dumps(evidence, indent=2))
 
 
