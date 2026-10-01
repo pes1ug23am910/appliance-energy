@@ -6,7 +6,7 @@ flowchart LR
   B <--> P[(PostgreSQL)]
   B <-->|TLS MQTT| M[Mosquitto / per-device ACLs]
   M <--> D[Simulator / SQLite spool]
-  M <--> F[ESP32 firmware adapter]
+  M <--> F[ESP32 / ESP8266 firmware adapters]
   B -->|durable telemetry outbox| K[Kafka]
   K --> X[Immutable batches / manifests]
   X --> L[Local bronze / silver / gold]
@@ -18,7 +18,7 @@ flowchart LR
   C --> R
 ```
 
-The local analytics engine is DuckDB. The separately executed Databricks implementation uses Delta tables and Unity Catalog, with a daily-row comparison against the local oracle. Device observations remain simulated. ESP32 firmware compiles with an NVS telemetry spool and optional BLE provisioning, but no board has been tested. The cloud Power BI refresh is operator-attested; the CSV Desktop model was also independently queried.
+The local analytics engine is DuckDB. The separately executed Databricks implementation uses Delta tables and Unity Catalog, with a daily-row comparison against the local oracle. Device observations remain simulated. ESP32 firmware compiles with an NVS telemetry spool and optional BLE provisioning; the separate ESP8266 adapter compiles with the same spool and TLS MQTT, without BLE or OTA. No board has been tested. The cloud Power BI refresh is operator-attested; the CSV Desktop model was also independently queried.
 
 ## A command is an intent with an identity
 
@@ -32,7 +32,7 @@ The device fences stale revisions and persists absolute state before reporting. 
 
 PostgreSQL checks both event UUID and device/boot/sequence identity. Conflicting content is quarantined without modifying the accepted row. Telemetry, application-receipt outbox and Kafka outbox are committed together. MQTT protocol acknowledgement follows the database transaction.
 
-The ESP32 adapter retains up to 64 immutable samples in a dedicated NVS partition until matching application receipts arrive. Reboots preserve old boot identities; overflow preserves existing samples and exposes a gap. Host fault tests cover ambiguous storage commits, while physical flash behavior still needs board tests.
+The ESP32 and ESP8266 adapters share a spool that retains up to 64 immutable samples in a dedicated NVS partition until matching application receipts arrive. Reboots preserve old boot identities; overflow preserves existing samples and exposes a gap. Host fault tests cover ambiguous storage commits, while physical flash behavior still needs board tests.
 
 Kafka publication and database completion cannot be atomic, so downstream duplicates remain possible. File export writes a checksummed batch before committing offsets. Bronze preserves raw evidence and provenance; silver validates identities and time/counter constraints; gold recomputes affected history to repair late arrivals. Replay is verified by row counts and energy totals, not by successful job exit alone.
 

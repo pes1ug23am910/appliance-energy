@@ -1,0 +1,30 @@
+menu "ESP8266 appliance settings"
+config APPLIANCE_DEVICE_ID
+    string "Device ID (ASCII letters, digits, underscore, hyphen; 1..64)"
+    default "device-esp8266"
+config APPLIANCE_WIFI_SSID
+    string "Wi-Fi SSID"
+    default ""
+config APPLIANCE_WIFI_PASSWORD
+    string "Wi-Fi password"
+    default ""
+config APPLIANCE_MQTT_URI
+    string "TLS broker URI whose hostname matches the CA-signed certificate"
+    default "mqtts://localhost:8883"
+config APPLIANCE_MQTT_PASSWORD
+    string "Unique MQTT device password"
+    default ""
+config APPLIANCE_OUTPUT_ENABLED
+    bool "Enable a confirmed low-voltage demonstration GPIO"
+    default n
+    help
+        Leave disabled until the exact board and output polarity are confirmed.
+        This profile never drives mains appliances.
+config APPLIANCE_OUTPUT_GPIO
+    int "Demonstration GPIO (avoid boot-strap pins and serial pins)"
+    range 0 16
+    default 4
+config APPLIANCE_OUTPUT_ACTIVE_LOW
+    bool "Output is active low"
+    default n
+endmenu

@@ -1,0 +1,40 @@
+diff --git a/include/mqtt_client.h b/include/mqtt_client.h
+--- a/include/mqtt_client.h
++++ b/include/mqtt_client.h
+@@ -133,6 +133,7 @@
+     char *data;                         /*!< Data associated with this event */
+     int data_len;                       /*!< Length of the data for this event */
+     int total_data_len;                 /*!< Total length of the data (longer data are supplied with multiple events) */
++    int retain;                         /*!< RETAIN bit from original PUBLISH header, including continuation events */
+     int current_data_offset;            /*!< Actual offset for the data associated with this event */
+     char *topic;                        /*!< Topic associated with this event */
+     int topic_len;                      /*!< Length of the topic for this event associated with this event */
+diff --git a/mqtt_client.c b/mqtt_client.c
+--- a/mqtt_client.c
++++ b/mqtt_client.c
+@@ -927,6 +927,7 @@
+ 
+     // post data event
+     client->event.msg_id = mqtt_get_id(msg_buf, msg_data_len);
++    client->event.retain = mqtt_get_retain(msg_buf);
+     client->event.total_data_len = msg_data_len + msg_total_len - msg_read_len;
+ 
+ post_data_event:
+@@ -947,13 +948,14 @@
+         msg_topic = NULL;
+         msg_topic_len = 0;
+         msg_data_offset += msg_data_len;
+-        msg_data_len = esp_transport_read(client-> transport, (char *)client->mqtt_state.in_buffer,
++        int read_result = esp_transport_read(client-> transport, (char *)client->mqtt_state.in_buffer,
+                                           msg_total_len - msg_read_len > buf_len ? buf_len : msg_total_len - msg_read_len,
+                                           client->config->network_timeout_ms);
+-        if (msg_data_len <= 0) {
+-            ESP_LOGE(TAG, "Read error or timeout: len_read=%d, errno=%d", msg_data_len, errno);
++        if (read_result <= 0) {
++            ESP_LOGE(TAG, "Read error or timeout: len_read=%d, errno=%d", read_result, errno);
+             return ESP_FAIL;
+         }
++        msg_data_len = (size_t)read_result;
+         msg_read_len += msg_data_len;
+         goto post_data_event;
+     }

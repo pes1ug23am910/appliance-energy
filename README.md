@@ -9,7 +9,7 @@ Two demonstrations share the same system:
 1. **Reliable control:** queue an absolute fan setpoint, disconnect, retry the same command, and reconcile the device report without creating another logical command.
 2. **Energy decisions:** ingest immutable telemetry batches, replay them without double-counting, inspect coverage, compare forecasts, and query approved gold tables.
 
-This is the software and simulator edition. Real HTTP, TLS MQTT, PostgreSQL, Kafka, SQLite, Flutter web/Android and local analytics execute here. The Databricks Free Edition pipeline also ran against the synthetic reference dataset, with Delta tables, selected Unity Catalog column lineage and managed MLflow evidence. Power BI Desktop reporting has separate native validation. A temporary Azure VM passed transport and five-minute fleet reconciliation checks; its services were removed after verification. ESP32 firmware compiles with persistent telemetry, BLE provisioning and signed updates; physical hardware behavior remains unverified. The [validation record](docs/VALIDATION.md) states the scope of each environment.
+This is the software and simulator edition. Real HTTP, TLS MQTT, PostgreSQL, Kafka, SQLite, Flutter web/Android and local analytics execute here. The Databricks Free Edition pipeline also ran against the synthetic reference dataset, with Delta tables, selected Unity Catalog column lineage and managed MLflow evidence. Power BI Desktop reporting has separate native validation. A temporary Azure VM passed transport and five-minute fleet reconciliation checks; its services were removed after verification. ESP32 firmware compiles with persistent telemetry, BLE provisioning and signed updates. A separate ESP8266 C adapter compiles with Wi-Fi/TLS MQTT, durable settings and the shared telemetry spool; it has no BLE or OTA. Physical hardware behavior remains unverified. The [validation record](docs/VALIDATION.md) states the scope of each environment.
 
 ## Start locally
 
@@ -80,6 +80,7 @@ The assistant has two distinct modes: six deterministic query intents, and an op
 | [analytics](analytics/README.md) | Local bronze/silver/gold, MLflow forecasts, anomaly and SQL evaluations |
 | [databricks](databricks/README.md) | Delta/Unity Catalog notebooks and sequential job bundle |
 | [firmware](firmware/README.md) | ESP-IDF device implementation and signed OTA profile |
+| [firmware/esp8266](firmware/esp8266/README.md) | Separate ESP8266 C target; compiled Wi-Fi/TLS MQTT, durable state and telemetry |
 | [infra](infra/README.md) | Azure Bicep and private Kubernetes backend manifests |
 | [contracts](contracts/PROTOCOL.md) | Shared events, command state and transport contract |
 | [docs](docs/BRIEF.md) | Business brief, architecture, decisions, validation and presentation |

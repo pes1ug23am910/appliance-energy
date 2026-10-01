@@ -1,0 +1,6 @@
+build*/
+sdkconfig
+sdkconfig.old
+main/ca_cert.pem
+.local/
+

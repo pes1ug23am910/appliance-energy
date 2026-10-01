@@ -1,0 +1,5 @@
+# Public inert values to keep networking reachable during link/size validation.
+# This profile is not a provisioned device image.
+CONFIG_APPLIANCE_WIFI_SSID="compile-only-not-a-network"
+CONFIG_APPLIANCE_MQTT_URI="mqtts://broker.invalid:8883"
+CONFIG_APPLIANCE_MQTT_PASSWORD="compile-only-not-a-secret"
