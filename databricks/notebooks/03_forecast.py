@@ -2,7 +2,7 @@
 # MAGIC %md
 # MAGIC # Forecast evaluation and batch predictions
 # MAGIC Requires NumPy, pandas and MLflow in the notebook environment. This adapter
-# MAGIC has not been run against an account. Test data lineage and model artifacts there.
+# MAGIC has dated Free Edition execution evidence in the component VALIDATION.md.
 
 # COMMAND ----------
 import re
@@ -17,7 +17,8 @@ assert all(re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*",part) for part in (catalog,sch
 ns=f"{catalog}.{schema}"
 spark.sql("SET TIME ZONE 'UTC'")
 current_user=spark.sql("SELECT current_user()").first()[0]
-mlflow.set_experiment(f"/Users/{current_user}/appliance-energy-forecast")
+experiment_suffix = "" if schema == "appliance_energy" else f"-{schema}"
+mlflow.set_experiment(f"/Users/{current_user}/appliance-energy-forecast{experiment_suffix}")
 daily=spark.table(f"{ns}.gold_device_daily")
 assert daily.count()<=100000,"Keep the student demo bounded before collecting daily aggregates"
 data=daily.toPandas().sort_values(["device_id","source_kind","day"])

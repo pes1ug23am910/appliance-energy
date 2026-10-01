@@ -1,0 +1,146 @@
+{
+  "recorded_at": "2026-10-01T17:53:46.872822+00:00",
+  "runs": [
+    {
+      "kind": "initial reference: all three tasks",
+      "result": "SUCCESS",
+      "duration_including_queue_ms": 548833,
+      "tasks": [
+        {
+          "task": "forecast",
+          "result": "SUCCESS"
+        },
+        {
+          "task": "ingest",
+          "result": "SUCCESS"
+        },
+        {
+          "task": "model",
+          "result": "SUCCESS"
+        }
+      ]
+    },
+    {
+      "kind": "unchanged reference replay: all three tasks",
+      "result": "SUCCESS",
+      "duration_including_queue_ms": 476224,
+      "tasks": [
+        {
+          "task": "forecast",
+          "result": "SUCCESS"
+        },
+        {
+          "task": "ingest",
+          "result": "SUCCESS"
+        },
+        {
+          "task": "model",
+          "result": "SUCCESS"
+        }
+      ]
+    },
+    {
+      "kind": "accepted-identity precedence reference: all three tasks",
+      "result": "SUCCESS",
+      "duration_including_queue_ms": 469238,
+      "tasks": [
+        {
+          "task": "forecast",
+          "result": "SUCCESS"
+        },
+        {
+          "task": "ingest",
+          "result": "SUCCESS"
+        },
+        {
+          "task": "model",
+          "result": "SUCCESS"
+        }
+      ]
+    },
+    {
+      "kind": "final reference model and forecast; unchanged ingest intentionally skipped",
+      "result": "SUCCESS",
+      "duration_including_queue_ms": 96371,
+      "tasks": [
+        {
+          "task": "forecast",
+          "result": "SUCCESS"
+        },
+        {
+          "task": "ingest",
+          "result": "DISABLED"
+        },
+        {
+          "task": "model",
+          "result": "SUCCESS"
+        }
+      ]
+    },
+    {
+      "kind": "fresh quality initial gap",
+      "result": "SUCCESS",
+      "duration_including_queue_ms": 493544,
+      "tasks": [
+        {
+          "task": "forecast",
+          "result": "SUCCESS"
+        },
+        {
+          "task": "ingest",
+          "result": "SUCCESS"
+        },
+        {
+          "task": "model",
+          "result": "SUCCESS"
+        }
+      ]
+    },
+    {
+      "kind": "quality late data plus nested adversarial conflicts",
+      "result": "SUCCESS",
+      "duration_including_queue_ms": 70535,
+      "tasks": [
+        {
+          "task": "forecast",
+          "result": "SUCCESS"
+        },
+        {
+          "task": "ingest",
+          "result": "SUCCESS"
+        },
+        {
+          "task": "model",
+          "result": "SUCCESS"
+        }
+      ]
+    },
+    {
+      "kind": "unchanged quality replay",
+      "result": "SUCCESS",
+      "duration_including_queue_ms": 69897,
+      "tasks": [
+        {
+          "task": "forecast",
+          "result": "SUCCESS"
+        },
+        {
+          "task": "ingest",
+          "result": "SUCCESS"
+        },
+        {
+          "task": "model",
+          "result": "SUCCESS"
+        }
+      ]
+    }
+  ],
+  "final_notebook_sha256": {
+    "notebooks/01_ingest.py": "7d5cc2f8027411e391cc5131b7d5993c9c4f3085d37e5f6d617f8a6252661d8b",
+    "notebooks/02_model.py": "7803dddd6fffd7269a6d68ced84b1cbbf6420259e6f14bf589eb3d9f3330312d",
+    "notebooks/03_forecast.py": "237da7dbe6778ad4ac73d1fb18376295e50af2167c26f20e32102c19d9fe63e0"
+  },
+  "reference_file_sha256": "d9aebe7d6e40cd7ccec59f768bab41061ddeeaf3563e87398d739f485d2894db",
+  "scope": "Actual Databricks Free Edition runs on synthetic data. Account identifiers intentionally omitted.",
+  "timing_limit": "Durations include queue and startup; these are not performance benchmark claims."
+}

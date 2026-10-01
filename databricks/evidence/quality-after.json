@@ -1,0 +1,600 @@
+{
+  "captured_at": "2026-10-01T17:47:39.673906+00:00",
+  "scope": "Databricks Free Edition, synthetic fixture; account identifiers omitted",
+  "quality": [
+    {
+      "bronze_rows": "8",
+      "accepted_events": "3",
+      "quarantined_rows": "4",
+      "gap_count": "0",
+      "invalid_interval_count": "0",
+      "unallocated_energy_wh": "0E-8"
+    }
+  ],
+  "identity": [
+    {
+      "accepted_events": "3",
+      "distinct_events": "3",
+      "distinct_slots": "3"
+    }
+  ],
+  "energy": [
+    {
+      "source_kind": "simulated",
+      "daily_rows": "1",
+      "energy_wh": "10.00000000",
+      "unallocated_energy_wh": "0E-8",
+      "coverage_seconds": "600.000000000",
+      "reading_count": "3"
+    }
+  ],
+  "invariants": [
+    {
+      "invalid_rows": "0"
+    }
+  ],
+  "quarantine": [
+    {
+      "reason": "conflicting_device_boot_sequence",
+      "rows": "1"
+    },
+    {
+      "reason": "conflicting_existing_identity",
+      "rows": "2"
+    },
+    {
+      "reason": "invalid_protocol_event",
+      "rows": "1"
+    }
+  ],
+  "forecast": [],
+  "candidate": [],
+  "anomaly": [],
+  "columns": [
+    {
+      "table_name": "anomaly_daily",
+      "column_name": "device_id",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "anomaly_daily",
+      "column_name": "source_kind",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "anomaly_daily",
+      "column_name": "day",
+      "data_type": "DATE"
+    },
+    {
+      "table_name": "anomaly_daily",
+      "column_name": "score",
+      "data_type": "DOUBLE"
+    },
+    {
+      "table_name": "anomaly_daily",
+      "column_name": "is_alert",
+      "data_type": "BOOLEAN"
+    },
+    {
+      "table_name": "anomaly_daily",
+      "column_name": "injected_label",
+      "data_type": "BOOLEAN"
+    },
+    {
+      "table_name": "anomaly_daily",
+      "column_name": "method",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "anomaly_daily",
+      "column_name": "coverage_ratio",
+      "data_type": "DOUBLE"
+    },
+    {
+      "table_name": "bronze_events",
+      "column_name": "source_hash",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "bronze_events",
+      "column_name": "source_file",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "bronze_events",
+      "column_name": "row_number",
+      "data_type": "LONG"
+    },
+    {
+      "table_name": "bronze_events",
+      "column_name": "raw_json",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "candidate_forecast_daily",
+      "column_name": "device_id",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "candidate_forecast_daily",
+      "column_name": "source_kind",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "candidate_forecast_daily",
+      "column_name": "forecast_origin",
+      "data_type": "DATE"
+    },
+    {
+      "table_name": "candidate_forecast_daily",
+      "column_name": "target_date",
+      "data_type": "DATE"
+    },
+    {
+      "table_name": "candidate_forecast_daily",
+      "column_name": "model",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "candidate_forecast_daily",
+      "column_name": "prediction_wh",
+      "data_type": "DOUBLE"
+    },
+    {
+      "table_name": "candidate_forecast_daily",
+      "column_name": "lower_wh",
+      "data_type": "DOUBLE"
+    },
+    {
+      "table_name": "candidate_forecast_daily",
+      "column_name": "upper_wh",
+      "data_type": "DOUBLE"
+    },
+    {
+      "table_name": "candidate_forecast_daily",
+      "column_name": "interval_nominal",
+      "data_type": "DOUBLE"
+    },
+    {
+      "table_name": "candidate_forecast_daily",
+      "column_name": "horizon_days",
+      "data_type": "INT"
+    },
+    {
+      "table_name": "candidate_forecast_daily",
+      "column_name": "interval_status",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "candidate_forecast_daily",
+      "column_name": "release_status",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "forecast_daily",
+      "column_name": "device_id",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "forecast_daily",
+      "column_name": "source_kind",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "forecast_daily",
+      "column_name": "forecast_origin",
+      "data_type": "DATE"
+    },
+    {
+      "table_name": "forecast_daily",
+      "column_name": "target_date",
+      "data_type": "DATE"
+    },
+    {
+      "table_name": "forecast_daily",
+      "column_name": "model",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "forecast_daily",
+      "column_name": "prediction_wh",
+      "data_type": "DOUBLE"
+    },
+    {
+      "table_name": "forecast_daily",
+      "column_name": "lower_wh",
+      "data_type": "DOUBLE"
+    },
+    {
+      "table_name": "forecast_daily",
+      "column_name": "upper_wh",
+      "data_type": "DOUBLE"
+    },
+    {
+      "table_name": "forecast_daily",
+      "column_name": "interval_nominal",
+      "data_type": "DOUBLE"
+    },
+    {
+      "table_name": "forecast_daily",
+      "column_name": "horizon_days",
+      "data_type": "INT"
+    },
+    {
+      "table_name": "forecast_daily",
+      "column_name": "interval_status",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "gold_device_daily",
+      "column_name": "device_id",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "gold_device_daily",
+      "column_name": "source_kind",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "gold_device_daily",
+      "column_name": "day",
+      "data_type": "DATE"
+    },
+    {
+      "table_name": "gold_device_daily",
+      "column_name": "energy_wh",
+      "data_type": "DECIMAL"
+    },
+    {
+      "table_name": "gold_device_daily",
+      "column_name": "unallocated_energy_wh",
+      "data_type": "DECIMAL"
+    },
+    {
+      "table_name": "gold_device_daily",
+      "column_name": "coverage_seconds",
+      "data_type": "DECIMAL"
+    },
+    {
+      "table_name": "gold_device_daily",
+      "column_name": "coverage_ratio",
+      "data_type": "DECIMAL"
+    },
+    {
+      "table_name": "gold_device_daily",
+      "column_name": "reading_count",
+      "data_type": "LONG"
+    },
+    {
+      "table_name": "gold_device_daily",
+      "column_name": "mean_power_w",
+      "data_type": "DOUBLE"
+    },
+    {
+      "table_name": "gold_device_daily",
+      "column_name": "peak_power_w",
+      "data_type": "DOUBLE"
+    },
+    {
+      "table_name": "gold_device_daily",
+      "column_name": "gap_count",
+      "data_type": "LONG"
+    },
+    {
+      "table_name": "gold_device_daily",
+      "column_name": "reset_count",
+      "data_type": "LONG"
+    },
+    {
+      "table_name": "gold_device_daily",
+      "column_name": "invalid_interval_count",
+      "data_type": "LONG"
+    },
+    {
+      "table_name": "gold_device_daily",
+      "column_name": "injected_anomaly_label",
+      "data_type": "BOOLEAN"
+    },
+    {
+      "table_name": "gold_device_hourly",
+      "column_name": "device_id",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "gold_device_hourly",
+      "column_name": "source_kind",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "gold_device_hourly",
+      "column_name": "hour",
+      "data_type": "TIMESTAMP"
+    },
+    {
+      "table_name": "gold_device_hourly",
+      "column_name": "energy_wh",
+      "data_type": "DECIMAL"
+    },
+    {
+      "table_name": "gold_device_hourly",
+      "column_name": "unallocated_energy_wh",
+      "data_type": "DECIMAL"
+    },
+    {
+      "table_name": "gold_device_hourly",
+      "column_name": "coverage_seconds",
+      "data_type": "DECIMAL"
+    },
+    {
+      "table_name": "gold_device_hourly",
+      "column_name": "reading_count",
+      "data_type": "LONG"
+    },
+    {
+      "table_name": "gold_device_hourly",
+      "column_name": "mean_power_w",
+      "data_type": "DOUBLE"
+    },
+    {
+      "table_name": "gold_device_hourly",
+      "column_name": "peak_power_w",
+      "data_type": "DOUBLE"
+    },
+    {
+      "table_name": "gold_device_hourly",
+      "column_name": "gap_count",
+      "data_type": "LONG"
+    },
+    {
+      "table_name": "gold_device_hourly",
+      "column_name": "reset_count",
+      "data_type": "LONG"
+    },
+    {
+      "table_name": "gold_device_hourly",
+      "column_name": "invalid_interval_count",
+      "data_type": "LONG"
+    },
+    {
+      "table_name": "gold_device_hourly",
+      "column_name": "labelled_normal",
+      "data_type": "BOOLEAN"
+    },
+    {
+      "table_name": "gold_device_hourly",
+      "column_name": "labelled_anomaly",
+      "data_type": "BOOLEAN"
+    },
+    {
+      "table_name": "gold_quality",
+      "column_name": "bronze_rows",
+      "data_type": "LONG"
+    },
+    {
+      "table_name": "gold_quality",
+      "column_name": "accepted_events",
+      "data_type": "LONG"
+    },
+    {
+      "table_name": "gold_quality",
+      "column_name": "quarantined_rows",
+      "data_type": "LONG"
+    },
+    {
+      "table_name": "gold_quality",
+      "column_name": "gap_count",
+      "data_type": "LONG"
+    },
+    {
+      "table_name": "gold_quality",
+      "column_name": "invalid_interval_count",
+      "data_type": "LONG"
+    },
+    {
+      "table_name": "gold_quality",
+      "column_name": "unallocated_energy_wh",
+      "data_type": "DECIMAL"
+    },
+    {
+      "table_name": "quarantine",
+      "column_name": "source_hash",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "quarantine",
+      "column_name": "row_number",
+      "data_type": "LONG"
+    },
+    {
+      "table_name": "quarantine",
+      "column_name": "event_id",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "quarantine",
+      "column_name": "reason",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "quarantine",
+      "column_name": "raw_json",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "quarantine",
+      "column_name": "quarantine_id",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "silver_telemetry",
+      "column_name": "schema_version",
+      "data_type": "INT"
+    },
+    {
+      "table_name": "silver_telemetry",
+      "column_name": "event_id",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "silver_telemetry",
+      "column_name": "device_id",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "silver_telemetry",
+      "column_name": "boot_id",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "silver_telemetry",
+      "column_name": "sequence_no",
+      "data_type": "LONG"
+    },
+    {
+      "table_name": "silver_telemetry",
+      "column_name": "event_time",
+      "data_type": "TIMESTAMP"
+    },
+    {
+      "table_name": "silver_telemetry",
+      "column_name": "received_at",
+      "data_type": "TIMESTAMP"
+    },
+    {
+      "table_name": "silver_telemetry",
+      "column_name": "source_kind",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "silver_telemetry",
+      "column_name": "power_w",
+      "data_type": "DOUBLE"
+    },
+    {
+      "table_name": "silver_telemetry",
+      "column_name": "energy_wh_total",
+      "data_type": "DOUBLE"
+    },
+    {
+      "table_name": "silver_telemetry",
+      "column_name": "firmware_version",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "silver_telemetry",
+      "column_name": "quality_flags_json",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "silver_telemetry",
+      "column_name": "payload_hash",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "telemetry_intervals",
+      "column_name": "schema_version",
+      "data_type": "INT"
+    },
+    {
+      "table_name": "telemetry_intervals",
+      "column_name": "event_id",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "telemetry_intervals",
+      "column_name": "device_id",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "telemetry_intervals",
+      "column_name": "boot_id",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "telemetry_intervals",
+      "column_name": "sequence_no",
+      "data_type": "LONG"
+    },
+    {
+      "table_name": "telemetry_intervals",
+      "column_name": "event_time",
+      "data_type": "TIMESTAMP"
+    },
+    {
+      "table_name": "telemetry_intervals",
+      "column_name": "received_at",
+      "data_type": "TIMESTAMP"
+    },
+    {
+      "table_name": "telemetry_intervals",
+      "column_name": "source_kind",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "telemetry_intervals",
+      "column_name": "power_w",
+      "data_type": "DOUBLE"
+    },
+    {
+      "table_name": "telemetry_intervals",
+      "column_name": "energy_wh_total",
+      "data_type": "DOUBLE"
+    },
+    {
+      "table_name": "telemetry_intervals",
+      "column_name": "firmware_version",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "telemetry_intervals",
+      "column_name": "quality_flags_json",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "telemetry_intervals",
+      "column_name": "payload_hash",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "telemetry_intervals",
+      "column_name": "previous_boot",
+      "data_type": "STRING"
+    },
+    {
+      "table_name": "telemetry_intervals",
+      "column_name": "previous_sequence",
+      "data_type": "LONG"
+    },
+    {
+      "table_name": "telemetry_intervals",
+      "column_name": "previous_time",
+      "data_type": "TIMESTAMP"
+    },
+    {
+      "table_name": "telemetry_intervals",
+      "column_name": "previous_energy",
+      "data_type": "DOUBLE"
+    },
+    {
+      "table_name": "telemetry_intervals",
+      "column_name": "energy_anchor",
+      "data_type": "DOUBLE"
+    },
+    {
+      "table_name": "telemetry_intervals",
+      "column_name": "seconds",
+      "data_type": "DECIMAL"
+    },
+    {
+      "table_name": "telemetry_intervals",
+      "column_name": "delta_wh",
+      "data_type": "DOUBLE"
+    },
+    {
+      "table_name": "telemetry_intervals",
+      "column_name": "interval_status",
+      "data_type": "STRING"
+    }
+  ]
+}

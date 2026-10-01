@@ -27,3 +27,14 @@ uv run --project simulator python scripts/with_env.py uv run --project simulator
 Use a fresh state directory or retain initial counters for comparison. Avoid another process with the same device IDs. A fresh filename alone does not reset persistent device state. For a fuller capacity study, stagger device schedules, measure ingestion/outbox lag separately, run a sustained soak, inject broker/database outages, and sample per-process CPU/memory throughout. Do not infer those results from this burst test.
 
 The bounded telemetry API query orders by `(received_at DESC, event_id)` for one device and limits results to at most 1,000. Its `(device_id, received_at DESC, event_id)` index matches that access path; a captured `EXPLAIN ANALYZE` plan accompanies the local artifacts. Operational retention and database growth still require a deployment policy.
+
+
+## Bounded Azure run
+
+A separate run on 1 October 2026 used a temporary Southeast Asia `Standard_B2as_v2` Linux VM (2 vCPU, 8 GiB) with the same four-container stack. One hundred simulated devices generated 30 scheduled ticks at ten-second intervals: 3,000 events over 301.190 seconds including final drain, with no missed ticks. All 3,000 received durable application receipts; dropped and pending counts were zero. Receipt p50 was 1.145 seconds, p95 2.533 seconds and maximum 4.105 seconds across 3,000 samples.
+
+Two fresh Kafka consumer groups each exported 3,001 unique events: the fleet plus one transport-smoke event. Their complete logical event maps matched, and their event-ID sets equalled the PostgreSQL-backed API result. Batch checks verified content hashes and row counts. This is transport reconciliation; the energy/late-data oracle experiments use separate datasets.
+
+Twenty-nine Docker snapshots were collected approximately every ten seconds across acceptance. Observed maximum memory was 241.0 MiB for the backend, 66.96 MiB for PostgreSQL, 440.6 MiB for Kafka and 6.957 MiB for Mosquitto. These are sampled container values, not continuous peak or whole-VM measurements. Docker CPU percentages can exceed 100% when multiple cores are used. The simulator recorded 5.684 CPU seconds.
+
+The smaller Azure fleet and longer generation window differ from the local 1,000-device burst. Their latencies do not establish a controlled cloud/local speedup or a production SLO. Longer soaks, failure injection, ingestion/outbox lag and resource saturation remain open. See the [sanitized receipt](../infra/evidence/azure-smoke.json) and [infrastructure validation](../infra/VALIDATION.md) for source, environment, cleanup and cost boundaries.

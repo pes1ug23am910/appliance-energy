@@ -1,0 +1,213 @@
+{
+  "captured_at": "2026-10-01T17:50:24.095387+00:00",
+  "column_lineage": [
+    {
+      "target_table": "gold_device_daily",
+      "target_column": "energy_wh",
+      "upstream": [
+        {
+          "table": "gold_device_hourly",
+          "column": "energy_wh"
+        }
+      ]
+    },
+    {
+      "target_table": "gold_device_hourly",
+      "target_column": "energy_wh",
+      "upstream": [
+        {
+          "table": "telemetry_intervals",
+          "column": "seconds"
+        },
+        {
+          "table": "telemetry_intervals",
+          "column": "previous_time"
+        },
+        {
+          "table": "telemetry_intervals",
+          "column": "delta_wh"
+        },
+        {
+          "table": "telemetry_intervals",
+          "column": "event_time"
+        }
+      ]
+    },
+    {
+      "target_table": "telemetry_intervals",
+      "target_column": "delta_wh",
+      "upstream": [
+        {
+          "table": "silver_telemetry",
+          "column": "event_time"
+        },
+        {
+          "table": "silver_telemetry",
+          "column": "source_kind"
+        },
+        {
+          "table": "silver_telemetry",
+          "column": "device_id"
+        },
+        {
+          "table": "silver_telemetry",
+          "column": "boot_id"
+        },
+        {
+          "table": "silver_telemetry",
+          "column": "event_id"
+        },
+        {
+          "table": "silver_telemetry",
+          "column": "energy_wh_total"
+        }
+      ]
+    },
+    {
+      "target_table": "silver_telemetry",
+      "target_column": "energy_wh_total",
+      "upstream": [
+        {
+          "table": "bronze_events",
+          "column": "raw_json"
+        }
+      ]
+    }
+  ],
+  "mlflow_runs": [
+    {
+      "parameters": {
+        "label_scope": "explicit simulated labels only",
+        "method": "seasonal_residual_mad",
+        "threshold": "4"
+      },
+      "metrics": {
+        "false_negative": 0,
+        "false_positive": 2,
+        "labelled_days": 98,
+        "precision": 0.75,
+        "recall": 1,
+        "true_positive": 6
+      },
+      "status": "FINISHED",
+      "artifacts": []
+    },
+    {
+      "parameters": {
+        "calibration_days": "14",
+        "device_id": "fixture-2",
+        "holdout_days": "14",
+        "interval_nominal": "0.9",
+        "model": "ridge_calendar",
+        "source_kind": "simulated"
+      },
+      "metrics": {
+        "calibration_mae_wh": 145.0521051459933,
+        "holdout_interval_coverage": 0.8571428571428571,
+        "holdout_mae_wh": 444.30434705707,
+        "holdout_mean_interval_width_wh": 885.1327127011973,
+        "holdout_rmse_wh": 788.829960786475
+      },
+      "status": "FINISHED",
+      "artifacts": [
+        {
+          "path": "data-provenance.json",
+          "bytes": 153
+        },
+        {
+          "path": "evaluation.json",
+          "bytes": 2795
+        }
+      ]
+    },
+    {
+      "parameters": {
+        "calibration_days": "14",
+        "device_id": "fixture-2",
+        "holdout_days": "14",
+        "interval_nominal": "0.9",
+        "model": "seasonal_naive",
+        "source_kind": "simulated"
+      },
+      "metrics": {
+        "calibration_mae_wh": 163.15605857785712,
+        "holdout_interval_coverage": 0.9285714285714286,
+        "holdout_mae_wh": 167.45811529000005,
+        "holdout_mean_interval_width_wh": 3830.6308728521426,
+        "holdout_rmse_wh": 594.0304194962455
+      },
+      "status": "FINISHED",
+      "artifacts": [
+        {
+          "path": "data-provenance.json",
+          "bytes": 153
+        },
+        {
+          "path": "evaluation.json",
+          "bytes": 2529
+        }
+      ]
+    },
+    {
+      "parameters": {
+        "calibration_days": "14",
+        "device_id": "fixture-1",
+        "holdout_days": "14",
+        "interval_nominal": "0.9",
+        "model": "ridge_calendar",
+        "source_kind": "simulated"
+      },
+      "metrics": {
+        "calibration_mae_wh": 127.15234668111262,
+        "holdout_interval_coverage": 0.8571428571428571,
+        "holdout_mae_wh": 390.37176182312606,
+        "holdout_mean_interval_width_wh": 777.1098639635111,
+        "holdout_rmse_wh": 693.3161425582609
+      },
+      "status": "FINISHED",
+      "artifacts": [
+        {
+          "path": "data-provenance.json",
+          "bytes": 153
+        },
+        {
+          "path": "evaluation.json",
+          "bytes": 2805
+        }
+      ]
+    },
+    {
+      "parameters": {
+        "calibration_days": "14",
+        "device_id": "fixture-1",
+        "holdout_days": "14",
+        "interval_nominal": "0.9",
+        "model": "seasonal_naive",
+        "source_kind": "simulated"
+      },
+      "metrics": {
+        "calibration_mae_wh": 143.95605857785716,
+        "holdout_interval_coverage": 0.9285714285714286,
+        "holdout_mae_wh": 148.25811528999998,
+        "holdout_mean_interval_width_wh": 3364.345158566429,
+        "holdout_rmse_wh": 522.2014302853847
+      },
+      "status": "FINISHED",
+      "artifacts": [
+        {
+          "path": "data-provenance.json",
+          "bytes": 153
+        },
+        {
+          "path": "evaluation.json",
+          "bytes": 2484
+        }
+      ]
+    }
+  ],
+  "limits": [
+    "Selected captured column edges, not universal lineage coverage",
+    "Forecast pandas boundary uses explicit table/version artifact provenance",
+    "Synthetic data does not validate measured-appliance predictions"
+  ]
+}

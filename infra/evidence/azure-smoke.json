@@ -1,0 +1,153 @@
+{
+  "status": "passed",
+  "recorded_at_utc": "2026-10-01T18:10:48.458590+00:00",
+  "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+  "environment": "Azure temporary Linux VM: Docker PostgreSQL, Java, Kafka, Mosquitto TLS; simulated devices",
+  "transport": {
+    "status": "passed",
+    "checks": [
+      "unauthenticated API rejected",
+      "ten API retries preserve one command and revision",
+      "changed payload and stale revision rejected",
+      "real TLS MQTT report confirms desired state",
+      "telemetry duplicate has one durable logical row and receipt",
+      "lost application report remains unconfirmed until reconciled",
+      "expired command rejected"
+    ],
+    "duration_seconds": 2.729,
+    "environment": "Azure temporary Linux VM: Docker PostgreSQL, Java, Kafka, Mosquitto TLS; simulated devices"
+  },
+  "fleet": {
+    "device_count": 100,
+    "duration_seconds": 301.18958765699995,
+    "process_cpu_seconds": 5.683551803,
+    "interval_seconds": 10.0,
+    "scheduled_ticks": 30,
+    "missed_ticks": 0,
+    "generated_events": 3000,
+    "receipt_latency": {
+      "sample_count": 3000,
+      "definition": "first publish attempt to durable application receipt; bounded latest samples per device",
+      "p50_seconds": 1.1454821319999837,
+      "p95_seconds": 2.533080898000037,
+      "max_seconds": 4.105345800000009
+    }
+  },
+  "accepted_delta": 3000,
+  "dropped_delta": 0,
+  "pending_at_end": 0,
+  "original_export": {
+    "manifests": 7,
+    "physical_rows": 3001,
+    "unique_events": 3001
+  },
+  "replay_export": {
+    "manifests": 7,
+    "physical_rows": 3001,
+    "unique_events": 3001
+  },
+  "kafka_replay_identical": true,
+  "api_unique_events": 3001,
+  "api_kafka_identity_reconciliation": true,
+  "duration_seconds": 344.864,
+  "limitations": [
+    "Single short shared-host run; not a capacity or availability SLA.",
+    "Devices are software simulations; no physical appliance was tested.",
+    "This run validates Azure VM/Compose runtime, not AKS or IoT Hub."
+  ],
+  "infrastructure": {
+    "region": "southeastasia",
+    "vm_size": "Standard_B2as_v2",
+    "vcpus": 2,
+    "memory_gib": 8,
+    "os_image": "Ubuntu 24.04 LTS",
+    "os_disk_gib": 64,
+    "os_disk_tier": "Premium_LRS",
+    "docker_version": "29.1.3",
+    "ssh_ingress": "one operator IPv4 /32",
+    "application_ports_bind_to": "127.0.0.1"
+  },
+  "sampled_resources": {
+    "sample_count": 29,
+    "containers": {
+      "backend": {
+        "samples": 29,
+        "max_docker_cpu_percent": 181.38,
+        "max_memory_mib": 241.0
+      },
+      "postgres": {
+        "samples": 29,
+        "max_docker_cpu_percent": 25.47,
+        "max_memory_mib": 66.96
+      },
+      "mosquitto": {
+        "samples": 29,
+        "max_docker_cpu_percent": 4.41,
+        "max_memory_mib": 6.957
+      },
+      "kafka": {
+        "samples": 29,
+        "max_docker_cpu_percent": 164.78,
+        "max_memory_mib": 440.6
+      }
+    },
+    "loopback_bound_ports": [
+      15432,
+      18080,
+      18883,
+      19092
+    ]
+  },
+  "deployment": {
+    "started_at_utc": "2026-10-01T17:59:30.463252+00:00",
+    "provisioning_started_at_utc": "2026-10-01T18:00:06.689170+00:00",
+    "owned_group_deleted_at_utc": "2026-10-01T18:13:06.798618+00:00",
+    "source_archive_sha256": "87d0e760e94b1f6efd7cb040528a8604a83519604b80034873f642615410fea7",
+    "application_jar_sha256": "eaff7d0b6e7e1e53d9556efc129caaddad463a87508f6752a572157ad5d2bcbb",
+    "migration_packaged": true,
+    "migration_applied": true
+  },
+  "cleanup": {
+    "dedicated_groups_created": 4,
+    "dedicated_groups_deleted": 4,
+    "automatic_regional_watcher_removed": true,
+    "watcher_flow_logs": 0,
+    "watcher_connection_monitors": 0,
+    "watcher_packet_captures": 0,
+    "remaining_resource_count": 0,
+    "verified_at_utc": "2026-10-01T18:17:09.588032+00:00",
+    "empty_system_resource_group_retained": true
+  },
+  "cost_estimate": {
+    "settled_billing": false,
+    "attempts_included": 4,
+    "failed_setup_attempts_included": 3,
+    "provisioning_to_group_deletion_minutes": 35.318,
+    "rounded_allocation_hours": 4,
+    "vm_usd_per_hour": 0.0944,
+    "disk_usd_per_month": 10.207,
+    "disk_month_hours_assumed": 730,
+    "ip_usd_per_hour": 0.005,
+    "all_allocations_rounded_up_usd": 0.4535,
+    "egress_reserve_usd": 0.5,
+    "downloaded_evidence_archive_bytes": 446129,
+    "total_conservative_envelope_usd": 0.9535,
+    "conversion_inr_per_usd": 95.9894,
+    "total_conservative_envelope_inr": 91.53,
+    "method": "Round every VM, disk and IP allocation up to a full hour per attempt, then add USD 0.50 for unmetered egress/transfer overhead. Retail-price estimate, not a settled charge."
+  },
+  "archive_regression": {
+    "automated_command": "python scripts/azure_test.py",
+    "automated_result": "passed",
+    "clean_build_epoch_zero": {
+      "migration_in_jar": false,
+      "flyway_migrations": 0,
+      "fresh_registration_http": 500
+    },
+    "clean_build_preserved_timestamps": {
+      "migration_in_jar": true,
+      "flyway_migrations": 1,
+      "fresh_registration_http": 200
+    }
+  }
+}

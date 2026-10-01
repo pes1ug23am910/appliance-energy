@@ -1,7 +1,7 @@
 # Databricks notebook source
 # MAGIC %md
 # MAGIC # Immutable file ingestion
-# MAGIC Account execution is required to validate this adapter. No deployment is implied.
+# MAGIC Dated account-execution evidence is recorded in the component VALIDATION.md.
 
 # COMMAND ----------
 import re
@@ -21,7 +21,8 @@ spark.sql(f"""CREATE TABLE IF NOT EXISTS {namespace}.bronze_events (
 ) USING DELTA""")
 
 # Bounded immutable batches are intentional: broker connectivity is outside this adapter.
-files = spark.read.format("binaryFile").option("pathGlobFilter", "*.jsonl").load(landing)
+files = (spark.read.format("binaryFile").option("pathGlobFilter", "*.jsonl")
+         .option("recursiveFileLookup", "true").load(landing))
 assert files.where("length > 16777216").limit(1).count() == 0, "Split input batches below 16 MiB"
 rows = (files.select(F.sha2("content", 256).alias("source_hash"), F.col("path").alias("source_file"),
                      F.posexplode(F.split(F.decode("content", "UTF-8"), "\n")).alias("line_index", "raw_json"))

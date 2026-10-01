@@ -18,6 +18,10 @@ resources:
       name: appliance-energy-lakehouse
       max_concurrent_runs: 1
       timeout_seconds: 1800
+      environments:
+        - environment_key: standard
+          spec:
+            environment_version: "5"
       parameters:
         - name: catalog
           default: ${var.catalog}
@@ -29,16 +33,19 @@ resources:
           default: ${var.max_gap_seconds}
       tasks:
         - task_key: ingest
+          environment_key: standard
           notebook_task:
             notebook_path: ./notebooks/01_ingest.py
           max_retries: 1
         - task_key: model
+          environment_key: standard
           depends_on:
             - task_key: ingest
           notebook_task:
             notebook_path: ./notebooks/02_model.py
           max_retries: 1
         - task_key: forecast
+          environment_key: standard
           depends_on:
             - task_key: model
           notebook_task:

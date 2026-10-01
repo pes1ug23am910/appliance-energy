@@ -26,14 +26,14 @@ valid = ((F.col("schema_version") == 1) & F.col("event_id").rlike(uuid_pattern) 
          & (F.col("power_w") >= 0) & ~F.isnan("power_w") & (F.col("power_w") != float("inf"))
          & (F.col("energy_wh_total") >= 0) & ~F.isnan("energy_wh_total") & (F.col("energy_wh_total") != float("inf"))
          & F.col("event_time").rlike(r"(Z|\+00:00)$") & F.col("received_at").rlike(r"(Z|\+00:00)$")
-         & F.to_timestamp("event_time").isNotNull() & F.to_timestamp("received_at").isNotNull()
+         & F.try_to_timestamp("event_time").isNotNull() & F.try_to_timestamp("received_at").isNotNull()
          & F.col("quality_flags").isNotNull() & (F.size("quality_flags") <= 32)
          & F.col("firmware_version").isNotNull() & (F.length("firmware_version") > 0)
          & (F.size(F.json_object_keys("raw_json")) == 12))
 invalid = parsed.where(~F.coalesce(valid, F.lit(False))).withColumn("reason", F.lit("invalid_protocol_event"))
 candidate = (parsed.where(F.coalesce(valid,F.lit(False))).withColumnRenamed("sequence","sequence_no")
              .withColumn("event_id",F.lower("event_id")).withColumn("boot_id",F.lower("boot_id"))
-             .withColumn("event_time",F.to_timestamp("event_time")).withColumn("received_at",F.to_timestamp("received_at"))
+             .withColumn("event_time",F.try_to_timestamp("event_time")).withColumn("received_at",F.try_to_timestamp("received_at"))
              .withColumn("quality_flags_json",F.to_json("quality_flags")))
 payload_columns = ["schema_version","event_id","device_id","boot_id","sequence_no","event_time","source_kind","power_w","energy_wh_total","firmware_version","quality_flags_json"]
 candidate = candidate.withColumn("payload_hash",F.sha2(F.to_json(F.struct(*payload_columns)),256))
@@ -44,7 +44,15 @@ spark.sql(f"""CREATE TABLE IF NOT EXISTS {ns}.silver_telemetry (
  quality_flags_json STRING,payload_hash STRING) USING DELTA""")
 existing = spark.table(f"{ns}.silver_telemetry")
 
-# Stable first evidence wins. Later contradictory payloads remain in quarantine.
+# Previously accepted evidence takes precedence over every later file hash.
+known_id = existing.select(F.col("event_id").alias("known_event_id"),F.col("payload_hash").alias("known_hash"))
+known_slot = existing.select("device_id","boot_id","sequence_no",F.col("event_id").alias("slot_event_id"))
+candidate_columns = candidate.columns
+checked = candidate.join(known_id,candidate.event_id==known_id.known_event_id,"left").join(known_slot,["device_id","boot_id","sequence_no"],"left")
+conflicts = checked.where("(known_event_id IS NOT NULL AND payload_hash != known_hash) OR (slot_event_id IS NOT NULL AND event_id != slot_event_id)").withColumn("reason",F.lit("conflicting_existing_identity"))
+candidate = checked.where("known_event_id IS NULL AND slot_event_id IS NULL").select(*candidate_columns)
+
+# Choose stable winners only among identities never accepted before.
 event_first = candidate.withColumn("_order",F.row_number().over(Window.partitionBy("event_id").orderBy("source_hash","row_number")))
 winners = event_first.where("_order=1").select("event_id",F.col("payload_hash").alias("winner_hash"))
 within_conflicts = candidate.join(winners,"event_id").where("payload_hash != winner_hash").withColumn("reason",F.lit("conflicting_event_id"))
@@ -53,14 +61,12 @@ slot_order = Window.partitionBy("device_id","boot_id","sequence_no").orderBy("so
 candidate = candidate.withColumn("_slot_order",F.row_number().over(slot_order))
 slot_conflicts = candidate.where("_slot_order>1").withColumn("reason",F.lit("conflicting_device_boot_sequence"))
 candidate = candidate.where("_slot_order=1").drop("_slot_order")
-known_id = existing.select(F.col("event_id").alias("known_event_id"),F.col("payload_hash").alias("known_hash"))
-known_slot = existing.select("device_id","boot_id","sequence_no",F.col("event_id").alias("slot_event_id"))
-checked = candidate.join(known_id,candidate.event_id==known_id.known_event_id,"left").join(known_slot,["device_id","boot_id","sequence_no"],"left")
-conflicts = checked.where("(known_event_id IS NOT NULL AND payload_hash != known_hash) OR (slot_event_id IS NOT NULL AND event_id != slot_event_id)").withColumn("reason",F.lit("conflicting_existing_identity"))
-accepted = checked.where("known_event_id IS NULL AND slot_event_id IS NULL").select(*silver_columns)
+accepted = candidate.select(*silver_columns)
 qcols=["source_hash","row_number","event_id","reason","raw_json"]
 quarantined=invalid.select(*qcols).unionByName(within_conflicts.select(*qcols)).unionByName(slot_conflicts.select(*qcols)).unionByName(conflicts.select(*qcols))
-quarantined=quarantined.withColumn("quarantine_id",F.sha2(F.concat_ws(":","source_hash","row_number","reason"),256)).dropDuplicates(["quarantine_id"])
+# A physical row stays one quarantine record even when later silver state changes
+# its classification from an intra-batch conflict to an existing-identity conflict.
+quarantined=quarantined.withColumn("quarantine_id",F.sha2(F.concat_ws(":","source_hash","row_number"),256)).dropDuplicates(["quarantine_id"])
 spark.sql(f"CREATE TABLE IF NOT EXISTS {ns}.quarantine (source_hash STRING,row_number BIGINT,event_id STRING,reason STRING,raw_json STRING,quarantine_id STRING) USING DELTA")
 (DeltaTable.forName(spark,f"{ns}.quarantine").alias("t").merge(quarantined.alias("s"),"t.quarantine_id=s.quarantine_id").whenNotMatchedInsertAll().execute())
 (DeltaTable.forName(spark,f"{ns}.silver_telemetry").alias("t").merge(accepted.alias("s"),"t.event_id=s.event_id").whenNotMatchedInsertAll().execute())

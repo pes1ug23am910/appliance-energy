@@ -1,0 +1,32 @@
+{
+  "passed": true,
+  "accepted_events": 3,
+  "quarantined_physical_rows": 4,
+  "covered_energy_before_wh": "0",
+  "covered_energy_after_wh": "10",
+  "unallocated_after_wh": "0",
+  "later_conflict_has_earlier_source_hash": true,
+  "accepted_original_payload_unchanged": true,
+  "malformed_timestamp_quarantined": true,
+  "replay": {
+    "compared_fields": [
+      "quality",
+      "identity",
+      "energy",
+      "invariants",
+      "quarantine",
+      "forecast",
+      "candidate",
+      "anomaly",
+      "columns"
+    ],
+    "unchanged": true,
+    "changed_fields": []
+  },
+  "fixture_sha256": {
+    "phase-one.jsonl": "5caaeb4929dc65468dfe7803d3639316b04a9752786637418fc17e38aea03ce2",
+    "phase-two.jsonl": "95ebbcf7d97e6a94e23205fa3b60846025f0445d262389928026a0acb33beb5a",
+    "earlier-hash-conflict.jsonl": "380dd4558ac7ac28bf805feb610b238851bd667e0419d859f1b89d63661c7b4b"
+  },
+  "scope": "Two-phase synthetic cloud acceptance, including recursive landing directories"
+}

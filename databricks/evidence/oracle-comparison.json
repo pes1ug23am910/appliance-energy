@@ -1,0 +1,11 @@
+{
+  "source": "Existing independently computed DuckDB database opened read-only",
+  "cloud_source": "Actual Databricks SQL export after successful serverless job",
+  "rows_compared": 142,
+  "columns_compared": 14,
+  "numeric_absolute_tolerance": "0.0000001",
+  "local_energy_wh": "221277.67265636",
+  "cloud_energy_wh": "221277.67265636",
+  "mismatches": [],
+  "passed": true
+}

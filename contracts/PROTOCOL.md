@@ -34,7 +34,7 @@ Broker TLS endpoint 8883; reject invalid certificates. Devices use unique creden
 - devices/{device_id}/desired: {command_id,device_id,revision,desired,expires_at}
 - devices/{device_id}/reported: {device_id,boot_id,sequence,revision,power,speed_percent,observed_at,firmware_version,command_id?}
 - devices/{device_id}/telemetry: event below.
-- devices/{device_id}/receipt: {event_id,status:'accepted'} after durable telemetry commit; simulator retries outstanding events.
+- devices/{device_id}/receipt: {event_id,status:'accepted'} after durable telemetry commit; simulator and ESP32 adapter retry outstanding events.
 - devices/{device_id}/sync: {device_id,boot_id}; backend resends current non-expired desired state and simulator republishes its report.
 
 The backend subscribes to reported, telemetry and sync. Retrying absolute setpoints is safe; stale revisions cannot regress state. Duplicate equal revisions report current state. Do not expose toggle/pulse operations.

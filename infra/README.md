@@ -1,6 +1,6 @@
 # Deployment preparation
 
-These files prepare later deployment work. They do not establish an Azure or Kubernetes deployment, availability target, production security review, or cloud cost result. The software edition runs on the local Docker network. No infrastructure is provisioned by compiling a template.
+The private foundation and Kubernetes adapter below are separate from the bounded Azure runtime demonstration in [azure/LAB.md](azure/LAB.md). Consult [VALIDATION.md](VALIDATION.md) for dated execution evidence and remaining limitations. Compiling a template alone never establishes a deployment.
 
 ## Private Azure VM foundation
 

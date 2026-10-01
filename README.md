@@ -9,7 +9,7 @@ Two demonstrations share the same system:
 1. **Reliable control:** queue an absolute fan setpoint, disconnect, retry the same command, and reconcile the device report without creating another logical command.
 2. **Energy decisions:** ingest immutable telemetry batches, replay them without double-counting, inspect coverage, compare forecasts, and query approved gold tables.
 
-This is the software and simulator edition. Real HTTP, TLS MQTT, PostgreSQL, Kafka, SQLite, Flutter web, DuckDB and local MLflow execute here. Databricks/Unity Catalog notebooks, ESP32 firmware and cloud deployment definitions are separate deliverables with explicit verification limits. No physical appliance, cloud deployment, energy saving or customer outcome is implied.
+This is the software and simulator edition. Real HTTP, TLS MQTT, PostgreSQL, Kafka, SQLite, Flutter web/Android and local analytics execute here. The Databricks Free Edition pipeline also ran against the synthetic reference dataset, with Delta tables, selected Unity Catalog column lineage and managed MLflow evidence. Power BI Desktop reporting has separate native validation. A temporary Azure VM passed transport and five-minute fleet reconciliation checks; its services were removed after verification. ESP32 firmware compiles with persistent telemetry, BLE provisioning and signed updates; physical hardware behavior remains unverified. The [validation record](docs/VALIDATION.md) states the scope of each environment.
 
 ## Start locally
 
@@ -56,7 +56,7 @@ uv run --project analytics python scripts/build_powerbi.py --data analytics/arti
 uv run --project analytics --with jsonschema==4.25.1 python scripts/validate_powerbi.py artifacts/powerbi
 ```
 
-Open `artifacts/powerbi/Energy.pbip` in Power BI Desktop and refresh its local CSV imports. The generated report covers energy, coverage/missing data, and forecasts with interval status. JSON schemas and Microsoft's Tabular model parser were validated; native visual rendering and refresh remain a manual acceptance check. [Power BI instructions](powerbi/README.md).
+Open `artifacts/powerbi/Energy.pbip` in Power BI Desktop and refresh its local CSV imports. The generated report covers energy, coverage/missing data, and forecasts with interval status. The CSV report refreshed and rendered all three pages; a native DAX query independently matched its source totals and row counts. The operator also confirmed refresh of the separate Databricks connector variant. [Power BI instructions](powerbi/README.md).
 
 For a portable, browser-verified energy dashboard:
 
@@ -76,7 +76,7 @@ The assistant has two distinct modes: six deterministic query intents, and an op
 |---|---|
 | [backend](backend/README.md) | Java 21, PostgreSQL inbox/outbox, twin, authenticated REST and WebSockets |
 | [simulator](simulator/README.md) | Persistent devices, telemetry receipts, fleet runner, Kafka batch export |
-| [mobile](mobile/README.md) | Flutter web console and persistent offline command queue |
+| [mobile](mobile/README.md) | Flutter web/Android console and persistent offline command queue |
 | [analytics](analytics/README.md) | Local bronze/silver/gold, MLflow forecasts, anomaly and SQL evaluations |
 | [databricks](databricks/README.md) | Delta/Unity Catalog notebooks and sequential job bundle |
 | [firmware](firmware/README.md) | ESP-IDF device implementation and signed OTA profile |
@@ -86,7 +86,7 @@ The assistant has two distinct modes: six deterministic query intents, and an op
 
 ## Evidence and decisions
 
-The [validation record](docs/VALIDATION.md) separates executed tests, generated artifacts and unverified environments. The [recommendation memo](docs/RECOMMENDATION.md) preserves negative results: the synthetic forecasting challenger lost to seasonal-naive, and a SQL guard alone did not ensure correct answers from the small local model. The [six-slide presentation](docs/presentation.html) opens in a browser.
+The [validation record](docs/VALIDATION.md) separates executed tests, generated artifacts and unverified environments. The [capability matrix](docs/FEATURES.md) retains the full remaining scope with explicit acceptance conditions. The [recommendation memo](docs/RECOMMENDATION.md) preserves negative results: the synthetic forecasting challenger lost to seasonal-naive, and a SQL guard alone did not ensure correct answers from the small local model. The [six-slide presentation](docs/presentation.html) opens in a browser. Follow the [two-demo runbook](docs/DEMO.md) to present the control and energy cases.
 
 This local deployment is a single-operator demonstration, with host ports bound to loopback. It is not an internet-facing or multi-tenant service. Read the [security boundaries](docs/SECURITY.md) before changing deployment exposure.
 

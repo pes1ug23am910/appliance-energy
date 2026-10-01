@@ -24,6 +24,7 @@ jobs:
       - run: uv run --project simulator --locked pytest scripts/tests -q
       - run: uv run --project simulator --locked python scripts/test_dashboard.py
       - run: python firmware/scripts/test_spool.py
+      - run: python scripts/azure_test.py
   backend:
     runs-on: ubuntu-latest
     timeout-minutes: 12

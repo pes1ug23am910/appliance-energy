@@ -15,6 +15,6 @@ After the guard fixes and baseline export, saved-SQL replay verified all 36 orig
 
 Actual local MQTT-to-Kafka exports were also checked: 91 batch manifests, 1,619 unique simulated observations, zero quarantines, and exactly 1.68874305 Wh before and after replay. SHA-256, row count, ordered event-ID hash and event-time bounds were verified before ingestion. The checked-in [result summary](results/local-verification.json) records these outcomes; raw generated evidence remains under `artifacts`.
 
-Databricks execution, Unity Catalog lineage, hosted Power BI refresh, physical sensors and Azure operation are not established by these local checks. Deterministic templates remain the default assistant mode.
+Databricks execution and selected Unity Catalog lineage have a separate [cloud validation record](../databricks/VALIDATION.md). [Power BI validation](../powerbi/VALIDATION.md) distinguishes native Desktop checks from untested hosted refresh. Physical sensors and cloud deployment behavior are not established by these local analytics checks. Deterministic templates remain the default assistant mode.
 
 Reproduction commands and metric definitions are in [README.md](README.md). Generated artifacts, environments, databases, downloaded data and private account information are excluded from source publication.
