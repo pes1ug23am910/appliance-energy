@@ -31,3 +31,13 @@ firmware/sdkconfig.old
 firmware/managed_components/
 
 *.iml
+
+# Local cloud credentials, deployment state and signing material
+.azure/
+.databricks/
+.bundle/
+.terraform/
+*.tfstate
+*.tfstate.*
+*.jks
+*.keystore

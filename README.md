@@ -1,103 +1,133 @@
 # Appliance Energy
 
-A smart-appliance control system and an energy analytics case study. One telemetry contract connects a Flutter operator console, a Java device-twin service, a durable simulator, MQTT, Kafka, and a lakehouse workflow.
+A full-stack IoT control and energy analytics project: send commands reliably, trace device telemetry into a lakehouse, and investigate consumption with coverage-aware reports and forecasts.
 
-The fictional client asks: **Which devices need investigation, and how much energy should we expect next week?** The answer includes observation coverage and uncertainty. A delivered command is not treated as a confirmed physical outcome.
+Built around **Flutter, Java 21 / Spring Boot, PostgreSQL, TLS MQTT, Kafka, DuckDB, Databricks and MLflow**. A persistent simulator makes the complete software workflow runnable without appliance hardware.
 
-Two demonstrations share the same system:
+![Energy dashboard showing consumption, observation coverage and forecasts for synthetic devices](docs/images/energy-dashboard.png)
 
-1. **Reliable control:** queue an absolute fan setpoint, disconnect, retry the same command, and reconcile the device report without creating another logical command.
-2. **Energy decisions:** ingest immutable telemetry batches, replay them without double-counting, inspect coverage, compare forecasts, and query approved gold tables.
+## What it demonstrates
 
-This is the software and simulator edition. Real HTTP, TLS MQTT, PostgreSQL, Kafka, SQLite, Flutter web/Android and local analytics execute here. The Databricks Free Edition pipeline also ran against the synthetic reference dataset, with Delta tables, selected Unity Catalog column lineage and managed MLflow evidence. Power BI Desktop reporting has separate native validation. A temporary Azure VM passed transport and five-minute fleet reconciliation checks; its services were removed after verification. ESP32 firmware compiles with persistent telemetry, BLE provisioning and signed updates. A separate ESP8266 C adapter compiles with Wi-Fi/TLS MQTT, durable settings and the shared telemetry spool; it has no BLE or OTA. Physical hardware behavior remains unverified. The [validation record](docs/VALIDATION.md) states the scope of each environment.
+- **Control through disconnects.** The Flutter console saves commands in SQLite before dispatch. Retries reuse the original command ID and payload; revision checks, expiry and transactional outboxes preserve intent. A matching device report confirms the outcome.
+- **Telemetry that can be replayed.** Devices retain pending samples until an application receipt arrives. The exporter publishes immutable Kafka batches with hash and offset manifests; ingestion deduplicates event identities and quarantines conflicts.
+- **Energy accounting with visible gaps.** Bronze/silver/gold processing separates observed consumption from unallocated intervals, preserves source cohorts and repairs aggregates when late observations arrive.
+- **Evaluated forecasts and queries.** Temporal holdouts compare ridge regression with seasonal-naive, while MLflow records results and provenance. Six deterministic query intents and optional local Ollama SQL generation share a read-only SQL guard.
 
-## Start locally
+The fictional energy case asks: **Which devices need investigation, and how much energy should we expect next week?** Reports keep observation coverage, source labels and uncertainty alongside the answer.
 
-Requirements: Docker with Compose, Python 3.12, [uv](https://docs.astral.sh/uv/), and enough disk space for container images. Flutter is needed only for the operator console. Windows was exercised locally; Linux is covered by the verification workflow.
+## Architecture
 
-From the repository root:
-
-```sh
-uv sync --project simulator --locked --python 3.12
-uv run --project simulator python scripts/bootstrap.py --devices 100
-docker compose up -d --build --wait
-uv run --project simulator python scripts/with_env.py uv run --project simulator python scripts/smoke.py
+```mermaid
+flowchart LR
+    UI[Flutter console<br/>SQLite command queue] <-->|REST + WebSocket| API[Java device twin]
+    API <--> DB[(PostgreSQL<br/>inbox + outboxes)]
+    API <-->|TLS MQTT| MQTT[Mosquitto<br/>device ACLs]
+    MQTT <--> SIM[Simulator<br/>SQLite telemetry spool]
+    API --> K[Kafka]
+    K --> B[Immutable batches<br/>hash + offset manifests]
+    B --> LOCAL[DuckDB<br/>bronze / silver / gold]
+    B --> CLOUD[Databricks<br/>Delta + Unity Catalog]
+    LOCAL --> ML[MLflow forecasts<br/>and evaluations]
+    CLOUD --> ML
+    LOCAL --> REPORT[Power BI / HTML reports]
+    CLOUD --> REPORT
+    LOCAL --> SQL[Guarded SQL queries]
 ```
 
-The first build downloads dependencies. If the API is still starting, wait until the backend startup message before running the smoke test. The bootstrap creates a local CA, per-device broker credentials and an operator token in ignored `.runtime/` and `.env` files. It preserves existing credentials on subsequent runs. Do not commit or share these files.
+See [architecture and failure boundaries](docs/ARCHITECTURE.md) and the [shared protocol](contracts/PROTOCOL.md) for command states, telemetry identities and recovery behavior.
 
-Run devices for one minute, then export the Kafka backlog:
+## Try the analytics demo
 
-```sh
-uv run --project simulator python scripts/with_env.py uv run --project simulator appliance-simulator run --count 10 --interval 2 --duration 60
-uv run --project simulator appliance-simulator export --once
-```
-
-`--once` drains until the assigned consumer has three empty polls. A continuously publishing fleet can keep it running. Kafka batches are written under `data/batches/` before offsets are committed; stable event IDs make replay safe. The exporter uses a stable consumer group, so a second run normally resumes from committed offsets.
-
-Start the [Flutter console](mobile/README.md), open `http://127.0.0.1:8090`, select backend `http://127.0.0.1:18080`, and enter the operator token from the local `.env`. The token stays in memory. Use the same browser origin after a reload to recover its command queue.
-
-Stop the services with `docker compose down`. Named volumes retain data. Removing volumes is an explicit reset, not part of normal shutdown.
-
-## Run the energy case
+Requires **Python 3.12** and [uv](https://docs.astral.sh/uv/). Run all commands below from the repository root:
 
 ```sh
 uv sync --project analytics --locked --python 3.12
-cd analytics
-uv run --locked python scripts/run_demo.py
+uv run --project analytics --locked python analytics/scripts/run_demo.py
+uv run --project analytics --locked python scripts/build_dashboard.py --data analytics/artifacts/powerbi --output artifacts/energy-dashboard.html
 ```
 
-This produces two 70-day synthetic device histories, bronze/silver/gold tables, forecasts, MLflow runs, evaluation reports and Power BI CSVs. A separately attributed, bounded REFIT adapter exercises public-data ingestion. Simulation is labelled; it is not a real appliance accuracy study.
+Open `artifacts/energy-dashboard.html` in a browser. The demo generates two 70-day synthetic device histories, builds bronze/silver/gold tables, checks replay invariance, evaluates forecasts and queries, and exports report data. It runs locally without Docker, cloud credentials or a model download.
 
-From the repository root, generate an editable three-page Power BI project:
+The dashboard filters source cohorts and shows consumption, observation coverage and device-specific forecast intervals. It is an exported snapshot. For commands, evaluation details and the optional attributed REFIT public-data adapter, see [local analytics](analytics/README.md).
+
+### Optional: editable Power BI report
+
+After the analytics demo, generate and validate the three-page report:
 
 ```sh
-uv run --project analytics python scripts/build_powerbi.py --data analytics/artifacts/powerbi
+uv run --project analytics --locked python scripts/build_powerbi.py --data analytics/artifacts/powerbi --output artifacts/powerbi
 uv run --project analytics --with jsonschema==4.25.1 python scripts/validate_powerbi.py artifacts/powerbi
 ```
 
-Open `artifacts/powerbi/Energy.pbip` in Power BI Desktop and refresh its local CSV imports. The generated report covers energy, coverage/missing data, and forecasts with interval status. The CSV report refreshed and rendered all three pages; a native DAX query independently matched its source totals and row counts. The operator also confirmed refresh of the separate Databricks connector variant. [Power BI instructions](powerbi/README.md).
+Open `artifacts/powerbi/Energy.pbip` in Power BI Desktop and refresh its local CSV imports. The pages cover energy, coverage/missing data, and forecasts. The [Power BI guide](powerbi/README.md) also describes the Databricks connector variant.
 
-For a portable, browser-verified energy dashboard:
+## Run the control and telemetry stack
+
+Requires **Docker with Compose**, Python 3.12 and uv. Start Docker before bootstrapping. The first run downloads dependencies and container images.
 
 ```sh
-uv run --project analytics python scripts/build_dashboard.py --data analytics/artifacts/powerbi --output artifacts/energy-dashboard.html
+uv sync --project simulator --locked --python 3.12
+uv run --project simulator --locked python scripts/bootstrap.py --devices 100
+docker compose up -d --build --wait
+uv run --project simulator --locked python scripts/with_env.py uv run --project simulator --locked python scripts/smoke.py
 ```
 
-Open the HTML file locally. It filters source cohorts explicitly, shows energy and coverage, and displays device-specific forecast intervals without summing marginal ranges.
+If the API is still starting, wait for the backend startup message before running the smoke test. Bootstrap creates a local CA, per-device broker credentials and an operator token in ignored `.runtime/` and `.env` files. Subsequent runs preserve existing credentials. Keep these files private.
 
-![Energy dashboard with synthetic data](docs/images/energy-dashboard.png)
+Run ten simulated devices for one minute, then export the Kafka backlog:
 
-The assistant has two distinct modes: six deterministic query intents, and an optional local Ollama model that proposes SQL. Both pass through the same read-only SQL guard. The model route is experimental; syntactically safe SQL can still answer the wrong question. [Analytics commands and evaluation](analytics/README.md).
+```sh
+uv run --project simulator --locked python scripts/with_env.py uv run --project simulator --locked appliance-simulator run --count 10 --interval 2 --duration 60
+uv run --project simulator --locked appliance-simulator export --once
+```
 
-## Repository map
+Batches appear under `data/batches/` before consumer offsets are committed. The exporter resumes from committed offsets; `--once` exits after three empty polls and may keep running while a fleet continuously publishes.
 
-| Path | Purpose |
-|---|---|
-| [backend](backend/README.md) | Java 21, PostgreSQL inbox/outbox, twin, authenticated REST and WebSockets |
-| [simulator](simulator/README.md) | Persistent devices, telemetry receipts, fleet runner, Kafka batch export |
-| [mobile](mobile/README.md) | Flutter web/Android console and persistent offline command queue |
-| [analytics](analytics/README.md) | Local bronze/silver/gold, MLflow forecasts, anomaly and SQL evaluations |
-| [databricks](databricks/README.md) | Delta/Unity Catalog notebooks and sequential job bundle |
-| [firmware](firmware/README.md) | ESP-IDF device implementation and signed OTA profile |
-| [firmware/esp8266](firmware/esp8266/README.md) | Separate ESP8266 C target; compiled Wi-Fi/TLS MQTT, durable state and telemetry |
-| [infra](infra/README.md) | Azure Bicep and private Kubernetes backend manifests |
-| [contracts](contracts/PROTOCOL.md) | Shared events, command state and transport contract |
-| [docs](docs/BRIEF.md) | Business brief, architecture, decisions, validation and presentation |
+To exercise the operator UI, follow the [Flutter console setup](mobile/README.md), open `http://127.0.0.1:8090`, select backend `http://127.0.0.1:18080`, and enter the operator token from your local `.env`. The token stays in memory. Keep the same browser origin to recover the command queue after a reload.
 
-## Evidence and decisions
+Then ingest those actual transport batches into a separate analytics database:
 
-The [validation record](docs/VALIDATION.md) separates executed tests, generated artifacts and unverified environments. The [capability matrix](docs/FEATURES.md) retains the full remaining scope with explicit acceptance conditions. The [recommendation memo](docs/RECOMMENDATION.md) preserves negative results: the synthetic forecasting challenger lost to seasonal-naive, and a SQL guard alone did not ensure correct answers from the small local model. The [six-slide presentation](docs/presentation.html) opens in a browser. Follow the [two-demo runbook](docs/DEMO.md) to present the control and energy cases.
+```sh
+uv run --project analytics --locked python analytics/scripts/verify_live_batches.py
+```
 
-This local deployment is a single-operator demonstration, with host ports bound to loopback. It is not an internet-facing or multi-tenant service. Read the [security boundaries](docs/SECURITY.md) before changing deployment exposure.
+Stop services with `docker compose down`. Named volumes retain data. The [two-demo runbook](docs/DEMO.md) walks through offline command recovery and energy analysis.
 
-## Verification
+## Validation and scope
+
+The [validation record](docs/VALIDATION.md) links dated checks for the local software, browser recovery, Android emulator persistence, Databricks workflow, Power BI and temporary Azure deployment. It distinguishes executed checks from generated artifacts and unfinished work.
+
+- **Software and simulator edition.** The local transport uses real HTTP, TLS MQTT, PostgreSQL and Kafka. Device observations remain simulated. ESP32 and ESP8266 firmware compile, but physical appliance behavior is unverified.
+- **Measured limitations stay visible.** The forecasting challenger lost on the recorded synthetic holdouts, so the report retains seasonal-naive. Longer-horizon intervals remain provisional. These results establish neither real-appliance forecast accuracy nor energy savings.
+- **Query safety and answer quality are evaluated separately.** The optional Ollama route can produce safe SQL with incorrect units, filters or results. Deterministic intents remain the default.
+- **Local deployment.** This is a single-operator demonstration with host ports bound to loopback. Production operation, multi-tenant authorization and physical hardware acceptance remain outside the verified scope.
+
+The [recommendation memo](docs/RECOMMENDATION.md) explains the model and reporting decisions. Read [security boundaries](docs/SECURITY.md) before changing deployment exposure.
+
+### Run tests
 
 ```sh
 uv run --project simulator --locked pytest simulator/tests -q
 uv run --project analytics --locked pytest analytics/tests -q
 ```
 
-Backend integration tests need a disposable PostgreSQL database; they deliberately clear its application tables. Flutter has its own analyze/test/build checks. See component READMEs and `.github/workflows/verify.yml`. The transport smoke test uses real brokers; it is separate from mocked or database-only tests.
+Backend integration tests require a disposable PostgreSQL database and deliberately clear its application tables. Component READMEs document backend, Flutter and firmware checks; the [verification workflow](.github/workflows/verify.yml) runs the automated suites. The transport smoke test exercises real brokers separately.
 
-MIT-licensed source. REFIT data retains its own attribution and licence; downloaded data, runtime credentials, model weights and build output are excluded from the repository.
+## Explore the source
+
+| Component | Contents |
+| --- | --- |
+| [Backend](backend/README.md) | Java device twin, PostgreSQL inbox/outboxes, authenticated REST and WebSockets |
+| [Simulator](simulator/README.md) | Persistent devices, telemetry receipts, fleet runner and Kafka export |
+| [Flutter console](mobile/README.md) | Web/Android operator UI and persistent offline command queue |
+| [Analytics](analytics/README.md) | DuckDB lakehouse, forecasts, anomalies and query evaluations |
+| [Databricks](databricks/README.md) | Delta/Unity Catalog notebooks and sequential job bundle |
+| [ESP32 firmware](firmware/README.md) | ESP-IDF implementation, BLE provisioning and signed OTA profiles |
+| [ESP8266 firmware](firmware/esp8266/README.md) | Separate C target with TLS MQTT, durable state and telemetry |
+| [Infrastructure](infra/README.md) | Azure deployment tooling and prepared Kubernetes manifests |
+
+For the project narrative, see the [business brief](docs/BRIEF.md), [capability matrix](docs/FEATURES.md) and [six-slide presentation](docs/presentation.html).
+
+## License and data
+
+Original project source is [MIT licensed](LICENSE). Third-party code retains its own licences; see [third-party notices](THIRD_PARTY_NOTICES.md). REFIT data retains its own attribution and CC BY 4.0 licence; see the [adapter documentation](analytics/README.md#public-refit-sample). Downloaded data, runtime credentials, model weights and generated build/report output are excluded from source control.
