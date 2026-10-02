@@ -8,13 +8,13 @@ Validated on 2026-10-02 with the official ESP8266_RTOS_SDK v3.4 (`89a3f254b63819
 
 | Measurement | Result |
 | --- | --- |
-| Application binary | 622,688 bytes |
-| Application SHA-256 | `894d12a56e63b0bd434379733eac8a38fe23e575009e20ac60dd34ade36fe656` |
+| Application binary | 623,472 bytes |
+| Application SHA-256 | `ec20ac82bf9950742387c4f06f06c78847f7696ccde9452392d36ae09eb10077` |
 | Factory application slot | 1,572,864 bytes |
 | Static DRAM (`.data` + `.bss`) | 13,420 bytes |
 | Static IRAM | 27,759 bytes |
 | Linker-reported unallocated DRAM / IRAM | 84,884 / 21,393 bytes |
-| Configured flash size | 4 MiB; physical flash not yet identified |
+| Configured flash size | 4 MiB; matches the separately identified bench board |
 | Telemetry NVS partition | 256 KiB |
 | Application / MQTT task stack configuration | 6,144 / 6,144 bytes |
 | TLS record capacities | 16 KiB incoming / 4 KiB outgoing; dynamic buffers enabled |
@@ -31,6 +31,16 @@ All 15 fault/regression suites passed under AddressSanitizer and UndefinedBehavi
 
 Build review additionally checked that both subscriptions must be acknowledged before publication, fatal errors latch the output off against concurrent commands, and a failed publish cannot silently reopen the one-message transport window.
 
-## Unverified physical behavior
+## First board bring-up
 
-No firmware was flashed, no serial port was opened for this validation, and no GPIO was connected. Actual USB enumeration, board identity/flash capacity, radio connectivity, broker/TLS handshake, runtime memory headroom, NVS durability during real power cuts and GPIO polarity remain unverified. Energy is estimated from setpoints, not measured. GPIO is disabled by default; speed is not PWM. This adapter has no BLE provisioning or OTA/rollback implementation. ESP32 signed A/B OTA and BLE checks are separate evidence and do not establish ESP8266 hardware behavior.
+A USB-only NodeMCU V3 was identified as an ESP8266EX with 4 MiB flash through its CH340 serial interface. The complete original flash image was backed up and verified before installing the project. Project bootloader, partition table and application writes were verified against their images. GPIO output remained disabled, with no external wiring.
+
+The board joined a private 2.4 GHz hotspot on channel 1 and obtained a DHCP address. A diagnostic build reported 60,488 bytes of free heap before time synchronization. This is a startup observation, not peak TLS headroom or a task-stack watermark.
+
+Time synchronization did not complete within the 60-second window when using either a public NTP hostname or a directly addressed public NTP server. The PC independently received public NTP replies. The device stopped before starting MQTT, preserving the clock requirement for certificate verification and command expiry. Board-side TLS, telemetry delivery, command confirmation and outage/reboot recovery remain **in progress**. A configurable NTP endpoint supports further testing on networks with restricted time-service reachability; certificate checks have not been relaxed.
+
+The final source passed full network-enabled inert compilation and all 15 existing host suites. An initial parallel run stalled in the desired-state and MQTT test binaries; those two containers were stopped, and bounded sequential retries passed without production-code changes. The hardware configuration, CA input and binary were preserved during these checks. Hardware credentials, configured binaries, flash backup and workstation logs are kept outside the published source.
+
+## Remaining physical validation
+
+Real power-cut durability, completed broker/TLS handshakes, sustained runtime memory headroom and GPIO polarity remain unverified. Energy is estimated from setpoints, not measured. GPIO is disabled by default; speed is not PWM. This adapter has no BLE provisioning or OTA/rollback implementation. ESP32 signed A/B OTA and BLE checks are separate evidence and do not establish ESP8266 hardware behavior.

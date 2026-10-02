@@ -14,6 +14,12 @@ config APPLIANCE_MQTT_URI
 config APPLIANCE_MQTT_PASSWORD
     string "Unique MQTT device password"
     default ""
+config APPLIANCE_NTP_SERVER
+    string "NTP server hostname or IPv4 address"
+    default "pool.ntp.org"
+    help
+        Use a reachable time server; a numeric IPv4 address bypasses DNS.
+        Clock synchronization is still required before TLS and command expiry.
 config APPLIANCE_OUTPUT_ENABLED
     bool "Enable a confirmed low-voltage demonstration GPIO"
     default n

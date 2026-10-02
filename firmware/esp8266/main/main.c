@@ -15,6 +15,8 @@
 #include "esp_wifi.h"
 #include "esp_netif.h"
 #include "esp_sntp.h"
+#include "tcpip_adapter.h"
+#include "lwip/ip_addr.h"
 #include "esp_system.h"
 #include "driver/gpio.h"
 #include "nvs_flash.h"
@@ -203,6 +205,17 @@ static void replay_one(void) {
     if(r==SPOOL_IO)fail_closed("spool read");
     if(r==SPOOL_OK)publish_text("telemetry",text);
 }
+static void clock_sync_notification(struct timeval *tv) {
+    ESP_LOGI(TAG,"Clock update received: epoch=%ld",(long)tv->tv_sec);
+}
+static void clock_diagnostics(void) {
+    tcpip_adapter_dns_info_t dns;
+    char address[48];
+    if(tcpip_adapter_get_dns_info(TCPIP_ADAPTER_IF_STA,TCPIP_ADAPTER_DNS_MAIN,&dns)==ESP_OK &&
+       ipaddr_ntoa_r(&dns.ip,address,sizeof(address)))
+        ESP_LOGI(TAG,"Clock DNS server: %s",address);
+    ESP_LOGI(TAG,"Clock startup free heap: %u",(unsigned)esp_get_free_heap_size());
+}
 static void wifi_event(void *arg,esp_event_base_t base,int32_t event_id,void *data) {
     (void)arg;(void)data;
     if(base==WIFI_EVENT&&event_id==WIFI_EVENT_STA_START)esp_wifi_connect();
@@ -226,8 +239,13 @@ void app_main(void) {
     wifi_config_t config={0};strlcpy((char*)config.sta.ssid,CONFIG_APPLIANCE_WIFI_SSID,sizeof(config.sta.ssid));strlcpy((char*)config.sta.password,CONFIG_APPLIANCE_WIFI_PASSWORD,sizeof(config.sta.password));
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA,&config));ESP_ERROR_CHECK(esp_wifi_start());
     if(!(xEventGroupWaitBits(network,WIFI_READY,pdFALSE,pdTRUE,pdMS_TO_TICKS(60000))&WIFI_READY))fail_closed("Wi-Fi timeout");
-    sntp_setoperatingmode(SNTP_OPMODE_POLL);sntp_setservername(0,"pool.ntp.org");sntp_init();
-    for(unsigned n=0;n<60&&time(NULL)<EPOCH_FLOOR;n++)vTaskDelay(pdMS_TO_TICKS(1000));
+    clock_diagnostics();
+    sntp_set_time_sync_notification_cb(clock_sync_notification);
+    sntp_setoperatingmode(SNTP_OPMODE_POLL);sntp_setservername(0,CONFIG_APPLIANCE_NTP_SERVER);sntp_init();
+    for(unsigned n=0;n<60&&time(NULL)<EPOCH_FLOOR;n++) {
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        if((n+1)%15==0)ESP_LOGI(TAG,"Clock wait: seconds=%u epoch=%ld status=%d free_heap=%u",n+1,(long)time(NULL),(int)sntp_get_sync_status(),(unsigned)esp_get_free_heap_size());
+    }
     if(time(NULL)<EPOCH_FLOOR)fail_closed("clock synchronization timeout");
     uuid(boot_id);xSemaphoreTake(state_lock,portMAX_DELAY);if(desired_restorable(&desired,time(NULL)))output(desired.value.power);xSemaphoreGive(state_lock);
     esp_mqtt_client_config_t broker={.uri=CONFIG_APPLIANCE_MQTT_URI,.cert_pem=(const char*)ca_cert_pem_start,.username=CONFIG_APPLIANCE_DEVICE_ID,.client_id=CONFIG_APPLIANCE_DEVICE_ID,.password=CONFIG_APPLIANCE_MQTT_PASSWORD,.disable_clean_session=true,.buffer_size=1536,.task_stack=6144,.skip_cert_common_name_check=false};
