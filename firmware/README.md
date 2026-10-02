@@ -12,7 +12,11 @@ docker run --rm -v "${PWD}:/project" -w /project espressif/idf:v5.5 idf.py build
 
 Defaults contain empty Wi-Fi and MQTT passwords and a localhost broker address. They compile but cannot operate a remote board. Before a later hardware run, configure the device ID, unique broker password, reachable TLS hostname and appropriate GPIO with `idf.py menuconfig`. Register that device through the backend API and grant its own namespace ACLs. Never commit generated `sdkconfig` files or binaries containing credentials.
 
-TLS requires a trusted CA and matching broker hostname; plaintext MQTT URIs and retained actuation messages are rejected. Sync is sent after desired-topic subscription acknowledgement.
+TLS requires a trusted CA, matching broker hostname and a synchronized clock within the certificate validity dates; plaintext MQTT URIs and retained actuation messages are rejected. Sync is sent after desired-topic subscription acknowledgement.
+
+The shared compile-time configuration guard requires both `CONFIG_MBEDTLS_HAVE_TIME=y` and `CONFIG_MBEDTLS_HAVE_TIME_DATE=y` for every ESP32 and ESP8266 profile. Both are explicit defaults. Existing generated `sdkconfig` files may retain the earlier disabled certificate-date option; enable it in `idf.py menuconfig` before rebuilding each ordinary, BLE or signed profile. The guard rejects a disabled option rather than silently producing an image without date checks. Earlier build evidence and this correction are distinguished in [validation](VALIDATION.md).
+
+Run `python scripts/test_tls_config.py` inside either firmware toolchain container to check both defaults and the compile-time rejection of missing or disabled date/time options.
 
 ## Persistence and state
 

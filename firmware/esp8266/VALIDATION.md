@@ -8,8 +8,8 @@ Validated on 2026-10-02 with the official ESP8266_RTOS_SDK v3.4 (`89a3f254b63819
 
 | Measurement | Result |
 | --- | --- |
-| Application binary | 623,472 bytes |
-| Application SHA-256 | `ec20ac82bf9950742387c4f06f06c78847f7696ccde9452392d36ae09eb10077` |
+| Application binary | 623,920 bytes |
+| Application SHA-256 | `7cb118b52db49c1ea79f3cb820396265ab0c35717122f027bb9f430a02ff9065` |
 | Factory application slot | 1,572,864 bytes |
 | Static DRAM (`.data` + `.bss`) | 13,420 bytes |
 | Static IRAM | 27,759 bytes |
@@ -37,9 +37,13 @@ A USB-only NodeMCU V3 was identified as an ESP8266EX with 4 MiB flash through it
 
 The board joined a private 2.4 GHz hotspot on channel 1 and obtained a DHCP address. A diagnostic build reported 60,488 bytes of free heap before time synchronization. This is a startup observation, not peak TLS headroom or a task-stack watermark.
 
-Time synchronization did not complete within the 60-second window when using either a public NTP hostname or a directly addressed public NTP server. The PC independently received public NTP replies. The device stopped before starting MQTT, preserving the clock requirement for certificate verification and command expiry. Board-side TLS, telemetry delivery, command confirmation and outage/reboot recovery remain **in progress**. A configurable NTP endpoint supports further testing on networks with restricted time-service reachability; certificate checks have not been relaxed.
+Time synchronization did not complete within the 60-second window when using either a public NTP hostname or a directly addressed public NTP server. The PC independently received public NTP replies. The device stopped before starting MQTT because its application-level clock gate did not pass. Board-side TLS, telemetry delivery, command confirmation and outage/reboot recovery remain **in progress**. A configurable NTP endpoint supports further testing on networks with restricted time-service reachability.
 
-The final source passed full network-enabled inert compilation and all 15 existing host suites. An initial parallel run stalled in the desired-state and MQTT test binaries; those two containers were stopped, and bounded sequential retries passed without production-code changes. The hardware configuration, CA input and binary were preserved during these checks. Hardware credentials, configured binaries, flash backup and workstation logs are kept outside the published source.
+The NTP configuration and diagnostic revision passed full network-enabled inert compilation and all 15 existing host suites. An initial parallel run stalled in the desired-state and MQTT test binaries; those two containers were stopped, and bounded sequential retries passed without production-code changes. The hardware configuration, CA input and binary were preserved during these checks. Hardware credentials, configured binaries, flash backup and workstation logs are kept outside the published source.
+
+## Certificate-date configuration audit
+
+A subsequent audit found that the earlier compile and board images used the SDK default with `CONFIG_MBEDTLS_HAVE_TIME_DATE` disabled. They configured CA and hostname verification, but did not enforce certificate validity dates. The clock gate alone did not enable that check. Current defaults explicitly enable both mbedTLS time support and certificate-date checks; both a shared compile-time guard and private hardware-build verification reject a generated configuration without either option. The corrected network-enabled inert build passed and supplies the measurements above. The separate 623,968-byte hardware image passed generated-configuration checks, was flashed without erasing settings, and was read back for verification. Both adapters now reject missing or disabled time/date flags at compile time; all eight invalid flag combinations were rejected and the enabled pair was accepted in the host preprocessor check. Board-side expired/not-yet-valid certificate rejection tests remain pending.
 
 ## Remaining physical validation
 

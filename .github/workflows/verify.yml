@@ -23,6 +23,7 @@ jobs:
       - run: uv run --project simulator --locked pytest simulator/tests -q
       - run: uv run --project simulator --locked pytest scripts/tests -q
       - run: uv run --project simulator --locked python scripts/test_dashboard.py
+      - run: python firmware/scripts/test_tls_config.py
       - run: python firmware/scripts/test_spool.py
       - run: python firmware/esp8266/scripts/test_desired.py
       - run: python scripts/azure_test.py
