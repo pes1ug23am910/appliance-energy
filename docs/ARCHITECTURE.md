@@ -18,7 +18,9 @@ flowchart LR
   C --> R
 ```
 
-The local analytics engine is DuckDB. The separately executed Databricks implementation uses Delta tables and Unity Catalog, with a daily-row comparison against the local oracle. Device observations remain simulated. ESP32 firmware compiles with an NVS telemetry spool and optional BLE provisioning; the separate ESP8266 adapter compiles with the same spool and TLS MQTT, without BLE or OTA. No board has been tested. The cloud Power BI refresh is operator-attested; the CSV Desktop model was also independently queried.
+The local analytics engine is DuckDB. The Databricks implementation uses Delta tables and Unity Catalog, with a daily-row comparison against the local oracle. The reference dashboard and forecasting demonstrations use simulated observations. A separate 203-event, setpoint-estimated NodeMCU V3 cohort passed Databricks ingestion, modeling and replay, with all 14 daily fields compared against the local oracle within numeric tolerance; its forecast was disabled because it covers only part of one day.
+
+ESP32 firmware compiles with an NVS telemetry spool and optional BLE provisioning. The separate ESP8266 adapter uses the same spool and TLS MQTT, without BLE or OTA. A USB-only NodeMCU V3 passed identification/flash checks, Wi-Fi/SNTP, numeric JSON startup, logical command convergence, controlled-reboot reconvergence, short broker-outage delivery and expired/future certificate rejection. GPIO remained disabled; physical switching and measured energy remain unverified. See [ESP8266 validation](../firmware/esp8266/VALIDATION.md) for the evidence boundaries. The cloud Power BI refresh is operator-attested; the CSV Desktop model was also independently queried.
 
 ## A command is an intent with an identity
 
@@ -32,7 +34,7 @@ The device fences stale revisions and persists absolute state before reporting. 
 
 PostgreSQL checks both event UUID and device/boot/sequence identity. Conflicting content is quarantined without modifying the accepted row. Telemetry, application-receipt outbox and Kafka outbox are committed together. MQTT protocol acknowledgement follows the database transaction.
 
-The ESP32 and ESP8266 adapters share a spool that retains up to 64 immutable samples in a dedicated NVS partition until matching application receipts arrive. Reboots preserve old boot identities; overflow preserves existing samples and exposes a gap. Host fault tests cover ambiguous storage commits, while physical flash behavior still needs board tests.
+The ESP32 and ESP8266 adapters share a spool that retains up to 64 immutable samples in a dedicated NVS partition until matching application receipts arrive. Reboots preserve old boot identities; overflow preserves existing samples and exposes a gap. Host fault tests cover ambiguous storage commits; physical flash power-cut durability and application-receipt recovery still need board tests.
 
 Kafka publication and database completion cannot be atomic, so downstream duplicates remain possible. File export writes a checksummed batch before committing offsets. Bronze preserves raw evidence and provenance; silver validates identities and time/counter constraints; gold recomputes affected history to repair late arrivals. Replay is verified by row counts and energy totals, not by successful job exit alone.
 

@@ -38,3 +38,18 @@ diff --git a/mqtt_client.c b/mqtt_client.c
          msg_read_len += msg_data_len;
          goto post_data_event;
      }
+@@ -1174,5 +1176,14 @@
+     switch (msg_type) {
+     case MQTT_MSG_TYPE_SUBACK:
++        /* This client subscribes to one topic per packet: require one valid grant.
++         * Do not consume the pending request or emit success for a denial. */
++        if (read_len != 5 || client->mqtt_state.in_buffer_read_len != 5 ||
++                client->mqtt_state.in_buffer[0] != 0x90 ||
++                client->mqtt_state.in_buffer[1] != 3 || msg_id == 0 ||
++                client->mqtt_state.in_buffer[4] > 2) {
++            ESP_LOGE(TAG, "Subscription denied or malformed SUBACK");
++            return ESP_FAIL;
++        }
+         if (is_valid_mqtt_msg(client, MQTT_MSG_TYPE_SUBSCRIBE, msg_id)) {
+             ESP_LOGD(TAG, "Subscribe successful");
+             client->event.event_id = MQTT_EVENT_SUBSCRIBED;

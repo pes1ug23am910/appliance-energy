@@ -7,6 +7,9 @@
 #include <math.h>
 #include <stdatomic.h>
 #include "../../main/tls_requirements.h"
+#if defined(CONFIG_NEWLIB_NANO_FORMAT) && CONFIG_NEWLIB_NANO_FORMAT
+#error "ESP8266 cJSON numeric serialization requires full Newlib formatting"
+#endif
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
@@ -68,7 +71,9 @@ static void output(bool on) {
 static void fail_closed(const char *reason) {
     halted=true; if(state_lock)xSemaphoreTake(state_lock,portMAX_DELAY);
     output(false); if(state_lock)xSemaphoreGive(state_lock);
-    ESP_LOGE(TAG,"Stopped: %s",reason);
+    ESP_LOGE(TAG,"Stopped: %s free_heap=%u stack_free_bytes=%u",reason,
+        (unsigned)esp_get_free_heap_size(),
+        (unsigned)(uxTaskGetStackHighWaterMark(NULL)*sizeof(StackType_t)));
     vTaskDelay(pdMS_TO_TICKS(3000)); esp_restart();
 }
 static int setting_read(void *ctx,uint8_t *p,size_t *n) {
@@ -165,34 +170,87 @@ static bool publish_text(const char *suffix,const char *text) {
     char topic[128];snprintf(topic,sizeof(topic),"devices/%s/%s",CONFIG_APPLIANCE_DEVICE_ID,suffix);
     if(esp_mqtt_client_publish(mqtt,topic,text,0,1,0)<0){/* Delivery/queueing is ambiguous: retain the window until ACK or reboot. */return false;}return true;
 }
-static bool publish_json(const char *suffix,cJSON *b) {
-    char *text=cJSON_PrintUnformatted(b);cJSON_Delete(b);if(!text)fail_closed("JSON allocation");
+/* Fail before a partial document can be persisted or published. */
+static cJSON *json_object(void) {
+    cJSON *body=cJSON_CreateObject();
+    if(!body)fail_closed("JSON object allocation failed");
+    return body;
+}
+static void json_member(cJSON *body,const cJSON *member) {
+    if(!member){cJSON_Delete(body);fail_closed("JSON member allocation failed");}
+}
+static void json_flag(cJSON *body,cJSON *flags,const char *value) {
+    cJSON *item=cJSON_CreateString(value);json_member(body,item);
+    cJSON_AddItemToArray(flags,item);
+}
+static char *serialize_json(cJSON *body) {
+    char *text=cJSON_PrintUnformatted(body);cJSON_Delete(body);
+    if(!text)fail_closed("JSON serialization failed");
+    return text;
+}
+static void json_numeric_self_test(void) {
+    const double fraction=2.0*10.0/3600.0;
+    cJSON *body=json_object();
+    json_member(body,cJSON_AddNumberToObject(body,"integer",1));
+    json_member(body,cJSON_AddNumberToObject(body,"energy",fraction));
+    json_member(body,cJSON_AddNumberToObject(body,"revision",(double)DESIRED_MAX_REVISION));
+    char *text=serialize_json(body);
+    cJSON *parsed=cJSON_ParseWithOpts(text,NULL,true);free(text);
+    if(!parsed)fail_closed("JSON numeric roundtrip parse failed");
+    const cJSON *one=cJSON_GetObjectItemCaseSensitive(parsed,"integer");
+    const cJSON *energy=cJSON_GetObjectItemCaseSensitive(parsed,"energy");
+    const cJSON *revision=cJSON_GetObjectItemCaseSensitive(parsed,"revision");
+    bool valid=cJSON_IsNumber(one)&&one->valuedouble==1.0&&
+        cJSON_IsNumber(energy)&&energy->valuedouble==fraction&&
+        cJSON_IsNumber(revision)&&revision->valuedouble==(double)DESIRED_MAX_REVISION;
+    cJSON_Delete(parsed);
+    if(!valid)fail_closed("JSON numeric roundtrip mismatch");
+    ESP_LOGI(TAG,"JSON numeric roundtrip PASS free_heap=%u stack_free_bytes=%u",
+        (unsigned)esp_get_free_heap_size(),
+        (unsigned)(uxTaskGetStackHighWaterMark(NULL)*sizeof(StackType_t)));
+}
+static bool publish_json(const char *suffix,cJSON *body) {
+    char *text=serialize_json(body);
     bool ok=publish_text(suffix,text);free(text);return ok;
 }
 static bool report(void) {
     if(report_sequence==DESIRED_MAX_REVISION)fail_closed("report sequence exhausted");
-    char now[32];timestamp(now);cJSON *b=cJSON_CreateObject();
     xSemaphoreTake(state_lock,portMAX_DELAY);
-    cJSON_AddStringToObject(b,"device_id",CONFIG_APPLIANCE_DEVICE_ID);cJSON_AddStringToObject(b,"boot_id",boot_id);
-    cJSON_AddNumberToObject(b,"sequence",++report_sequence);cJSON_AddNumberToObject(b,"revision",(double)desired.value.revision);
-    cJSON_AddBoolToObject(b,"power",output_power);cJSON_AddNumberToObject(b,"speed_percent",desired.value.speed);
-    cJSON_AddStringToObject(b,"observed_at",now);cJSON_AddStringToObject(b,"firmware_version",FIRMWARE_VERSION);
-    if(desired.value.command_id[0])cJSON_AddStringToObject(b,"command_id",desired.value.command_id);
-    xSemaphoreGive(state_lock);return publish_json("reported",b);
+    desired_value_t snapshot=desired.value;bool power=output_power;
+    xSemaphoreGive(state_lock);
+    char now[32];timestamp(now);cJSON *body=json_object();
+    json_member(body,cJSON_AddStringToObject(body,"device_id",CONFIG_APPLIANCE_DEVICE_ID));
+    json_member(body,cJSON_AddStringToObject(body,"boot_id",boot_id));
+    json_member(body,cJSON_AddNumberToObject(body,"sequence",(double)++report_sequence));
+    json_member(body,cJSON_AddNumberToObject(body,"revision",(double)snapshot.revision));
+    json_member(body,cJSON_AddBoolToObject(body,"power",power));
+    json_member(body,cJSON_AddNumberToObject(body,"speed_percent",snapshot.speed));
+    json_member(body,cJSON_AddStringToObject(body,"observed_at",now));
+    json_member(body,cJSON_AddStringToObject(body,"firmware_version",FIRMWARE_VERSION));
+    if(snapshot.command_id[0])json_member(body,cJSON_AddStringToObject(body,"command_id",snapshot.command_id));
+    return publish_json("reported",body);
 }
 static void sample(double seconds) {
     if(sequence==DESIRED_MAX_REVISION)fail_closed("telemetry sequence exhausted");
     xSemaphoreTake(state_lock,portMAX_DELAY);double power=2.0+(output_power?40.0*desired.value.speed/100.0:0.0);energy_wh+=power*seconds/3600.0;xSemaphoreGive(state_lock);
-    char now[32],id[37];timestamp(now);uuid(id);cJSON *b=cJSON_CreateObject();
-    cJSON_AddNumberToObject(b,"schema_version",1);cJSON_AddStringToObject(b,"event_id",id);cJSON_AddStringToObject(b,"device_id",CONFIG_APPLIANCE_DEVICE_ID);cJSON_AddStringToObject(b,"boot_id",boot_id);
-    cJSON_AddNumberToObject(b,"sequence",(double)++sequence);cJSON_AddStringToObject(b,"event_time",now);cJSON_AddStringToObject(b,"source_kind","estimated");
-    cJSON_AddNumberToObject(b,"power_w",power);cJSON_AddNumberToObject(b,"energy_wh_total",energy_wh);cJSON_AddStringToObject(b,"firmware_version",FIRMWARE_VERSION);
-    cJSON *flags=cJSON_AddArrayToObject(b,"quality_flags");cJSON_AddItemToArray(flags,cJSON_CreateString("setpoint_model_no_energy_sensor"));
+    char now[32],id[37];timestamp(now);uuid(id);cJSON *body=json_object();
+    json_member(body,cJSON_AddNumberToObject(body,"schema_version",1));
+    json_member(body,cJSON_AddStringToObject(body,"event_id",id));
+    json_member(body,cJSON_AddStringToObject(body,"device_id",CONFIG_APPLIANCE_DEVICE_ID));
+    json_member(body,cJSON_AddStringToObject(body,"boot_id",boot_id));
+    json_member(body,cJSON_AddNumberToObject(body,"sequence",(double)++sequence));
+    json_member(body,cJSON_AddStringToObject(body,"event_time",now));
+    json_member(body,cJSON_AddStringToObject(body,"source_kind","estimated"));
+    json_member(body,cJSON_AddNumberToObject(body,"power_w",power));
+    json_member(body,cJSON_AddNumberToObject(body,"energy_wh_total",energy_wh));
+    json_member(body,cJSON_AddStringToObject(body,"firmware_version",FIRMWARE_VERSION));
+    cJSON *flags=cJSON_AddArrayToObject(body,"quality_flags");json_member(body,flags);
+    json_flag(body,flags,"setpoint_model_no_energy_sensor");
 #ifndef CONFIG_APPLIANCE_OUTPUT_ENABLED
-    cJSON_AddItemToArray(flags,cJSON_CreateString("gpio_output_disabled"));
+    json_flag(body,flags,"gpio_output_disabled");
 #endif
-    if(spool_overflow)cJSON_AddItemToArray(flags,cJSON_CreateString("telemetry_spool_capacity_exceeded"));
-    char *text=cJSON_PrintUnformatted(b);cJSON_Delete(b);if(!text)fail_closed("JSON allocation");
+    if(spool_overflow)json_flag(body,flags,"telemetry_spool_capacity_exceeded");
+    char *text=serialize_json(body);
     xSemaphoreTake(spool_lock,portMAX_DELAY);spool_result_t r=spool_append(&spool,id,text);xSemaphoreGive(spool_lock);free(text);
     if(r==SPOOL_IO||r==SPOOL_INVALID)fail_closed("telemetry persistence");
     spool_overflow=r==SPOOL_FULL;if(spool_overflow)ESP_LOGW(TAG,"Spool full: sample skipped; unacknowledged records retained");
@@ -234,6 +292,7 @@ void app_main(void) {
     if(!desired_open(&desired,NULL,setting_read,setting_write)||spool_open(&spool,(spool_storage_t){.read=spool_read_storage,.write=spool_write_storage,.erase=spool_erase_storage})!=SPOOL_OK)fail_closed("stored data corrupt or unreadable; never auto erase");
     state_lock=xSemaphoreCreateMutex();spool_lock=xSemaphoreCreateMutex();network=xEventGroupCreate();if(!state_lock||!spool_lock||!network)fail_closed("mutex allocation");
     if(strncmp(CONFIG_APPLIANCE_MQTT_URI,"mqtts://",8)||!strlen(CONFIG_APPLIANCE_WIFI_SSID)||!strlen(CONFIG_APPLIANCE_MQTT_PASSWORD))fail_closed("configure Wi-Fi, TLS broker and unique credentials locally");
+    json_numeric_self_test();
     ESP_ERROR_CHECK(esp_netif_init());ESP_ERROR_CHECK(esp_event_loop_create_default());
     wifi_init_config_t init=WIFI_INIT_CONFIG_DEFAULT();ESP_ERROR_CHECK(esp_wifi_init(&init));
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT,ESP_EVENT_ANY_ID,wifi_event,NULL));ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT,IP_EVENT_STA_GOT_IP,wifi_event,NULL));
@@ -259,7 +318,10 @@ void app_main(void) {
         else if((TickType_t)(tick-last_progress)>pdMS_TO_TICKS(120000))fail_closed("MQTT acknowledgement timeout; durable records retained");
         if(!(xEventGroupGetBits(network)&BROKER_READY)||!send_available)continue;
         if(take_flag(&need_sync)) {
-            cJSON *b=cJSON_CreateObject();cJSON_AddStringToObject(b,"device_id",CONFIG_APPLIANCE_DEVICE_ID);cJSON_AddStringToObject(b,"boot_id",boot_id);if(!publish_json("sync",b))need_sync=true;
+            cJSON *body=json_object();
+            json_member(body,cJSON_AddStringToObject(body,"device_id",CONFIG_APPLIANCE_DEVICE_ID));
+            json_member(body,cJSON_AddStringToObject(body,"boot_id",boot_id));
+            if(!publish_json("sync",body))need_sync=true;
         } else if(take_flag(&need_report)){if(!report())need_report=true;}
         else replay_one();
     }

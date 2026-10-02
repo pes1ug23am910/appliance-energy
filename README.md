@@ -97,10 +97,10 @@ Stop services with `docker compose down`. Named volumes retain data. The [two-de
 
 The [validation record](docs/VALIDATION.md) links dated checks for the local software, browser recovery, Android emulator persistence, Databricks workflow, Power BI and temporary Azure deployment. It distinguishes executed checks from generated artifacts and unfinished work.
 
-- **Software and simulator edition.** The local transport uses real HTTP, TLS MQTT, PostgreSQL and Kafka. Device observations remain simulated. ESP32 and ESP8266 firmware compile, but physical appliance behavior is unverified.
+- **Software and simulator edition with a USB board bench.** The local transport uses real HTTP, TLS MQTT, PostgreSQL and Kafka. Reference dashboard and forecasting data remain synthetic. A GPIO-disabled NodeMCU V3 passed logical commands, bounded recovery and certificate-date checks; its 203 setpoint-estimated events passed a separate Databricks ingestion/model/replay check. Physical switching, measured energy and power-cut durability remain unverified. See [ESP8266 validation](firmware/esp8266/VALIDATION.md).
 - **Measured limitations stay visible.** The forecasting challenger lost on the recorded synthetic holdouts, so the report retains seasonal-naive. Longer-horizon intervals remain provisional. These results establish neither real-appliance forecast accuracy nor energy savings.
 - **Query safety and answer quality are evaluated separately.** The optional Ollama route can produce safe SQL with incorrect units, filters or results. Deterministic intents remain the default.
-- **Local deployment.** This is a single-operator demonstration with host ports bound to loopback. Production operation, multi-tenant authorization and physical hardware acceptance remain outside the verified scope.
+- **Local deployment.** This is a single-operator demonstration with host ports bound to loopback. Production operation, multi-tenant authorization and full physical appliance acceptance remain outside the verified scope.
 
 The [recommendation memo](docs/RECOMMENDATION.md) explains the model and reporting decisions. Read [security boundaries](docs/SECURITY.md) before changing deployment exposure.
 

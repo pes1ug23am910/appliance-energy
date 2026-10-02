@@ -132,3 +132,22 @@ jobs:
           ndk: 28.2.13676358
           script: flutter test integration_test/native_store_test.dart -d emulator-5554 --timeout 5m
       - run: flutter build apk --debug --target-platform android-arm64,android-x64
+  esp8266:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Build pinned ESP8266 toolchain and MQTT patch
+        run: docker build -t appliance-esp8266-toolchain:3.4 firmware/esp8266
+      - name: Create ephemeral compile-only CA
+        run: >-
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1
+          -subj '/CN=Firmware compile-only CA'
+          -keyout "$RUNNER_TEMP/firmware-test-key.pem"
+          -out firmware/esp8266/main/ca_cert.pem
+      - name: Cross-compile networking and full numeric formatting
+        run: docker run --rm --network none -v "$PWD:/project" appliance-esp8266-toolchain:3.4 python scripts/build_compile.py
+      - name: Verify MQTT receive and subscription failures
+        run: docker run --rm --network none -v "$PWD:/project" appliance-esp8266-toolchain:3.4 python scripts/test_mqtt_retain.py
+      - name: Verify JSON allocation and serialization failures
+        run: docker run --rm --network none -v "$PWD:/project" appliance-esp8266-toolchain:3.4 python scripts/test_json.py
